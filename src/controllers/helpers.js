@@ -8,5 +8,23 @@ function obterId(req, res) {
     }
     return id;
 }
-
-module.exports = { obterId };
+function obterCpf(req, res) {
+    const cpf = req.params.cpf;
+    const cpfNormalizado = cpf.replace(/[.\-]/g, '');
+    if (!/^\d{11}$/.test(cpfNormalizado)) {
+        res.status(RESP_HTTP.BAD_REQUEST).json({ erro: 'CPF inválido. Use 00000000000 ou 000.000.000-00' });
+        return null;
+    }
+    return cpfNormalizado;
+}
+ 
+function obterNome(req, res) {
+    const nome = (req.query.nome || '').trim();
+    if (!nome) {
+        res.status(RESP_HTTP.BAD_REQUEST).json({ erro: 'Parâmetro de busca "nome" é obrigatório' });
+        return null;
+    }
+    return nome;
+}
+ 
+module.exports = { obterId, obterCpf, obterNome };
