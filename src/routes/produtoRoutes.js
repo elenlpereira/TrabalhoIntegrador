@@ -8,7 +8,7 @@ router.get('/', ProdutoController.listar);
 router.get('/:id', ProdutoController.buscar);
 router.post('/', ProdutoController.criar);
 router.put('/:id', ProdutoController.atualizar);
-router.patch('/:id', ProdutoController.atualizar);
+router.patch('/:id', ProdutoController.atualizarParcial);
 router.delete('/:id', ProdutoController.remover);
 
 module.exports = router;
