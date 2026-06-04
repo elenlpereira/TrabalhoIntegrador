@@ -2,6 +2,11 @@
 
 Sistema de gerenciamento de bar para controle operacional e financeiro.
 
+## Stack
+
+- Node.js: ambiente de execução JavaScript no backend.
+- Express: framework web para criação das rotas e API do sistema.
+
 ## Inicialização do projeto
 
 Instalar as dependências principais:
