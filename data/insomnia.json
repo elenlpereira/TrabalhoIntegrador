@@ -1,0 +1,110 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-06-04",
+  "__export_source": "insomnia",
+  "resources": [
+    {
+      "_id": "wrk",
+      "_type": "workspace",
+      "name": "API Prog II",
+      "description": "Trabalho integrador"
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "parentId": "wrk",
+      "name": "Base",
+      "data": {
+        "base_url": "http://localhost:3000"
+      }
+    },
+    {
+      "_id": "fld_usuarios",
+      "_type": "request_group",
+      "parentId": "wrk",
+      "name": "Usuários"
+    },
+
+    {
+      "_id": "req_listar",
+      "_type": "request",
+      "parentId": "fld_usuarios",
+      "name": "Listar todos",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/usuarios",
+      "body": {},
+      "headers": []
+    },
+
+    {
+      "_id": "req_buscar",
+      "_type": "request",
+      "parentId": "fld_usuarios",
+      "name": "Buscar por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/usuarios/1",
+      "body": {},
+      "headers": []
+    },
+
+    {
+      "_id": "req_criar",
+      "_type": "request",
+      "parentId": "fld_usuarios",
+      "name": "Criar usuário",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/usuarios",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nomeCompleto\": \"Maria Oliveira\",\n  \"email\": \"maria@email.com\",\n  \"senha\": \"senha123\",\n  \"confirmacaoSenha\": \"senha123\",\n  \"perfil\": \"Atendente\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+
+    {
+      "_id": "req_atualizar",
+      "_type": "request",
+      "parentId": "fld_usuarios",
+      "name": "Atualizar usuário (PUT)",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/usuarios/1",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nomeCompleto\": \"Maria Oliveira Atualizada\",\n  \"email\": \"maria.atualizada@email.com\",\n  \"senha\": \"novaSenha123\",\n  \"confirmacaoSenha\": \"novaSenha123\",\n  \"perfil\": \"Gerente\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+
+    {
+      "_id": "req_patch",
+      "_type": "request",
+      "parentId": "fld_usuarios",
+      "name": "Atualizar parcial (PATCH)",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/usuarios/1",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"perfil\": \"Gerente\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+
+    {
+      "_id": "req_remover",
+      "_type": "request",
+      "parentId": "fld_usuarios",
+      "name": "Remover usuário",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/usuarios/1",
+      "body": {},
+      "headers": []
+    }
+  ]
+}
