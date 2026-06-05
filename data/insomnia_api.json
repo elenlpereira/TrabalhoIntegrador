@@ -165,6 +165,88 @@
     },
 
     {
+      "_id": "fld_saidas",
+      "_type": "request_group",
+      "parentId": "wrk_api",
+      "name": "Saídas"
+    },
+    {
+      "_id": "req_saidas_listar_tipos",
+      "_type": "request",
+      "parentId": "fld_saidas",
+      "name": "Listar tipos de saída",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/saidas/tipos",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_saidas_listar",
+      "_type": "request",
+      "parentId": "fld_saidas",
+      "name": "Listar todas",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/saidas",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_saidas_listar_filtro_tipo",
+      "_type": "request",
+      "parentId": "fld_saidas",
+      "name": "Listar por tipo",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/saidas?tipoSaida=quebra",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_saidas_listar_filtro_origem",
+      "_type": "request",
+      "parentId": "fld_saidas",
+      "name": "Listar por origem",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/saidas?origem=manual",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_saidas_buscar",
+      "_type": "request",
+      "parentId": "fld_saidas",
+      "name": "Buscar por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/saidas/1",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_saidas_criar_manual",
+      "_type": "request",
+      "parentId": "fld_saidas",
+      "name": "Registrar saída manual",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/saidas/manual",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"produtoId\": 1,\n  \"quantidade\": 3,\n  \"tipoSaida\": \"quebra\",\n  \"descricao\": \"Latas amassadas na entrega\",\n  \"data\": \"2026-06-04\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_saidas_estornar",
+      "_type": "request",
+      "parentId": "fld_saidas",
+      "name": "Estornar saída (DELETE)",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/saidas/1",
+      "body": {},
+      "headers": []
+    },
+
+    {
       "_id": "fld_produtos",
       "_type": "request_group",
       "parentId": "wrk_api",
