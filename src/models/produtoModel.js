@@ -1,6 +1,3 @@
-// O Model encapsula TODA a lógica de dados.
-// O Controller nunca acessa os dados diretamente.
-
 let produtos = [
     { id: 1, nome: 'Coca-Cola Lata', quantidadeEstoque: 48, estoqueMinimo: 10, categoria: 'bar', precoCusto: 2.50, precoVenda: 5.00 },
     { id: 2, nome: 'Pastel frito', quantidadeEstoque: 20, estoqueMinimo: 5, categoria: 'alimentos', precoCusto: 7.00, precoVenda: 15.00 },
