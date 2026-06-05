@@ -20,8 +20,8 @@ function normalizarCpf(cpf) {
 }
  
 function validarCamposObrigatorios(dados) {
-    if (!dados.nome || !dados.cpf) {
-        throw new Error('Campos obrigatórios ausentes: nome, cpf');
+    if (!dados.nome || !dados.cpf || !dados.telefone) {
+        throw new Error('Campos obrigatórios ausentes: nome, cpf, telefone');
     }
 }
  
