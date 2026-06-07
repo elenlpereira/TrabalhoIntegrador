@@ -1,4 +1,5 @@
 const { CONSUMIDOR_FINAL_ID } = require('./clienteModel');
+const FichaModel = require('./fichaModel');
 
 const FORMAS_VISTA  = ['dinheiro', 'pix', 'debito', 'credito'];
 const FORMAS_PRAZO  = ['prazo'];
@@ -109,6 +110,12 @@ function pagar(id, lancamentos) {
     pagamento.status = STATUS.PAGO;
     pagamento.pagoEm = new Date().toISOString();
 
+
+    // Registra débitos na ficha do cliente para cada lançamento a prazo
+    const lancamentosPrazo = lancamentos.filter(l => l.forma === 'prazo');
+    for (const lanc of lancamentosPrazo) {
+        FichaModel.registrarDebito(pagamento.clienteId, pagamento.comandaId, lanc.valor);
+    }
     return pagamento;
 }
 
