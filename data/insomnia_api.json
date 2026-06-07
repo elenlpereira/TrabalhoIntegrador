@@ -268,7 +268,17 @@
       "parentId": "fld_produtos",
       "name": "Listar por categoria",
       "method": "GET",
-      "url": "{{ _.base_url }}/api/produtos?categoria=bar",
+      "url": "{{ _.base_url }}/api/produtos?categoria=bebidas",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_produtos_listar_fornecedor",
+      "_type": "request",
+      "parentId": "fld_produtos",
+      "name": "Listar por fornecedor",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/produtos?fornecedorId=1",
       "body": {},
       "headers": []
     },
@@ -291,7 +301,7 @@
       "url": "{{ _.base_url }}/api/produtos",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"nome\": \"Suco de Laranja\",\n  \"quantidadeEstoque\": 30,\n  \"estoqueMinimo\": 5,\n  \"categoria\": \"bar\",\n  \"precoCusto\": 3.50,\n  \"precoVenda\": 7.00\n}"
+        "text": "{\n  \"nome\": \"Suco de Laranja\",\n  \"quantidadeEstoque\": 30,\n  \"estoqueMinimo\": 5,\n  \"categoria\": \"bebidas\",\n  \"precoCusto\": 3.50,\n  \"precoVenda\": 7.00,\n  \"fornecedorId\": 1\n}"
       },
       "headers": [
         { "name": "Content-Type", "value": "application/json" }
@@ -306,7 +316,7 @@
       "url": "{{ _.base_url }}/api/produtos/1",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"nome\": \"Coca-Cola Lata 350ml\",\n  \"quantidadeEstoque\": 60,\n  \"estoqueMinimo\": 12,\n  \"categoria\": \"bar\",\n  \"precoCusto\": 2.80,\n  \"precoVenda\": 5.50\n}"
+        "text": "{\n  \"nome\": \"Coca-Cola Lata 350ml\",\n  \"quantidadeEstoque\": 60,\n  \"estoqueMinimo\": 12,\n  \"categoria\": \"bebidas\",\n  \"precoCusto\": 2.80,\n  \"precoVenda\": 5.50,\n  \"fornecedorId\": 1\n}"
       },
       "headers": [
         { "name": "Content-Type", "value": "application/json" }
@@ -321,7 +331,7 @@
       "url": "{{ _.base_url }}/api/produtos/1",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"precoVenda\": 6.00\n}"
+        "text": "{\n  \"precoVenda\": 6.00,\n  \"fornecedorId\": 1\n}"
       },
       "headers": [
         { "name": "Content-Type", "value": "application/json" }
@@ -334,6 +344,337 @@
       "name": "Remover produto",
       "method": "DELETE",
       "url": "{{ _.base_url }}/api/produtos/1",
+      "body": {},
+      "headers": []
+    },
+
+    {
+      "_id": "fld_clientes",
+      "_type": "request_group",
+      "parentId": "wrk_api",
+      "name": "Clientes"
+    },
+    {
+      "_id": "req_clientes_listar",
+      "_type": "request",
+      "parentId": "fld_clientes",
+      "name": "Listar todos",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/clientes",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_clientes_buscar_nome",
+      "_type": "request",
+      "parentId": "fld_clientes",
+      "name": "Buscar por nome",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/clientes/busca?nome=joao",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_clientes_buscar_cpf",
+      "_type": "request",
+      "parentId": "fld_clientes",
+      "name": "Buscar por CPF",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/clientes/cpf/12345678900",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_clientes_buscar_id",
+      "_type": "request",
+      "parentId": "fld_clientes",
+      "name": "Buscar por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/clientes/1",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_clientes_criar",
+      "_type": "request",
+      "parentId": "fld_clientes",
+      "name": "Criar cliente",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/clientes",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Maria Souza\",\n  \"cpf\": \"98765432100\",\n  \"telefone\": \"11988887777\",\n  \"email\": \"maria.souza@email.com\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_clientes_atualizar",
+      "_type": "request",
+      "parentId": "fld_clientes",
+      "name": "Atualizar cliente (PUT)",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/clientes/1",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Joao Silva Atualizado\",\n  \"cpf\": \"12345678900\",\n  \"telefone\": \"11977776666\",\n  \"email\": \"joao.atualizado@example.com\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_clientes_patch",
+      "_type": "request",
+      "parentId": "fld_clientes",
+      "name": "Atualizar parcial (PATCH)",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/clientes/1",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"telefone\": \"11966665555\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_clientes_remover",
+      "_type": "request",
+      "parentId": "fld_clientes",
+      "name": "Remover cliente",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/clientes/1",
+      "body": {},
+      "headers": []
+    },
+
+    {
+      "_id": "fld_fornecedores",
+      "_type": "request_group",
+      "parentId": "wrk_api",
+      "name": "Fornecedores"
+    },
+    {
+      "_id": "req_fornecedores_listar",
+      "_type": "request",
+      "parentId": "fld_fornecedores",
+      "name": "Listar todos",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/fornecedores",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_fornecedores_buscar_nome",
+      "_type": "request",
+      "parentId": "fld_fornecedores",
+      "name": "Buscar por nome",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/fornecedores/busca?nome=distribuidora",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_fornecedores_buscar_cnpj",
+      "_type": "request",
+      "parentId": "fld_fornecedores",
+      "name": "Buscar por CNPJ",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/fornecedores/cnpj/11222333000181",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_fornecedores_buscar_id",
+      "_type": "request",
+      "parentId": "fld_fornecedores",
+      "name": "Buscar por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/fornecedores/1",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_fornecedores_criar",
+      "_type": "request",
+      "parentId": "fld_fornecedores",
+      "name": "Criar fornecedor",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/fornecedores",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"razaoSocial\": \"Atacado Nova Era Ltda\",\n  \"cnpj\": \"22333444000155\",\n  \"telefone\": \"49988887777\",\n  \"email\": \"contato@novaera.com\",\n  \"cidade\": \"Chapeco\",\n  \"categoriaProduto\": \"alimentos\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_fornecedores_atualizar",
+      "_type": "request",
+      "parentId": "fld_fornecedores",
+      "name": "Atualizar fornecedor (PUT)",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/fornecedores/1",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"razaoSocial\": \"Distribuidora ABC Atualizada Ltda\",\n  \"cnpj\": \"11222333000181\",\n  \"telefone\": \"49977776666\",\n  \"email\": \"contato.atualizado@abc.com\",\n  \"cidade\": \"Chapeco\",\n  \"categoriaProduto\": \"bebidas\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_fornecedores_patch",
+      "_type": "request",
+      "parentId": "fld_fornecedores",
+      "name": "Atualizar parcial (PATCH)",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/fornecedores/1",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"categoriaProduto\": \"mercearia\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_fornecedores_remover",
+      "_type": "request",
+      "parentId": "fld_fornecedores",
+      "name": "Remover fornecedor",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/fornecedores/1",
+      "body": {},
+      "headers": []
+    },
+
+    {
+      "_id": "fld_comandas",
+      "_type": "request_group",
+      "parentId": "wrk_api",
+      "name": "Comandas"
+    },
+    {
+      "_id": "req_comandas_listar",
+      "_type": "request",
+      "parentId": "fld_comandas",
+      "name": "Listar todas",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/comandas",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_comandas_listar_abertas",
+      "_type": "request",
+      "parentId": "fld_comandas",
+      "name": "Listar por status (aberta)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/comandas?status=aberta",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_comandas_buscar",
+      "_type": "request",
+      "parentId": "fld_comandas",
+      "name": "Buscar por ID",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/comandas/1",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_comandas_criar",
+      "_type": "request",
+      "parentId": "fld_comandas",
+      "name": "Criar comanda",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/comandas",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"clienteId\": 1,\n  \"infoCliente\": \"Mesa 7\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_comandas_atualizar_cabecalho",
+      "_type": "request",
+      "parentId": "fld_comandas",
+      "name": "Atualizar cabecalho (PATCH)",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/comandas/1",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"clienteId\": 1,\n  \"infoCliente\": \"Mesa 8\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_comandas_adicionar_item",
+      "_type": "request",
+      "parentId": "fld_comandas",
+      "name": "Adicionar item",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/comandas/1/itens",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"produtoId\": 1,\n  \"quantidade\": 2\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_comandas_atualizar_item",
+      "_type": "request",
+      "parentId": "fld_comandas",
+      "name": "Atualizar item (PATCH)",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/comandas/1/itens/1",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"quantidade\": 3\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    {
+      "_id": "req_comandas_remover_item",
+      "_type": "request",
+      "parentId": "fld_comandas",
+      "name": "Remover item",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/comandas/1/itens/1",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_comandas_fechar",
+      "_type": "request",
+      "parentId": "fld_comandas",
+      "name": "Fechar comanda",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/comandas/1/fechar",
+      "body": {},
+      "headers": []
+    },
+    {
+      "_id": "req_comandas_cancelar",
+      "_type": "request",
+      "parentId": "fld_comandas",
+      "name": "Cancelar comanda",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/comandas/1",
       "body": {},
       "headers": []
     }

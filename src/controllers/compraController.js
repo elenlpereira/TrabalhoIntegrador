@@ -1,4 +1,5 @@
 const CompraModel = require('../models/compraModel');
+const FornecedorModel = require('../models/fornecedor.Model');
 const RESP_HTTP = require('../../consts');
 const helper = require('./helpers');
 
@@ -37,7 +38,7 @@ function remover(req, res) {
 }
 
 function listarFornecedores(req, res) {
-    const fornecedores = CompraModel.listarFornecedores();
+    const fornecedores = FornecedorModel.listarTodos();
     res.status(RESP_HTTP.OK).json({ total: fornecedores.length, fornecedores });
 }
 

@@ -104,7 +104,7 @@ function cancelar(req, res) {
     try {
         const comanda = ComandaModel.cancelar(id);
         if (!comanda) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Comanda não encontrada' });
-        res.status(RESP_HTTP.OK).json({ mensagem: 'Comanda cancelada e estoque estornado', comanda });
+        res.status(RESP_HTTP.OK).json({ mensagem: 'Comanda cancelada com sucesso', comanda });
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
     }

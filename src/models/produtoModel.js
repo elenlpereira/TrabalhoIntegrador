@@ -1,23 +1,37 @@
+const FornecedorModel = require('./fornecedor.Model');
+
 let produtos = [
-    { id: 1, nome: 'Coca-Cola Lata', quantidadeEstoque: 48, estoqueMinimo: 10, categoria: 'bar', precoCusto: 2.50, precoVenda: 5.00 },
-    { id: 2, nome: 'Pastel frito', quantidadeEstoque: 20, estoqueMinimo: 5, categoria: 'alimentos', precoCusto: 7.00, precoVenda: 15.00 },
+    { id: 1, nome: 'Coca-Cola Lata', quantidadeEstoque: 48, estoqueMinimo: 10, categoria: 'bebidas', precoCusto: 2.50, precoVenda: 5.00, fornecedorId: 1 },
+    { id: 2, nome: 'Pastel frito', quantidadeEstoque: 20, estoqueMinimo: 5, categoria: 'alimentos', precoCusto: 7.00, precoVenda: 15.00, fornecedorId: 1 },
 ];
 let proximoId = 3;
 
-const CATEGORIAS_VALIDAS = ['bar', 'mercearia', 'lanche', 'jogos'];
+const CATEGORIAS_VALIDAS = ['bebidas', 'alimentos', 'mercearia', 'outros'];
 
 // ── Validações ────────────────────────────────────────────────────────────────
 
+function normalizarCategoria(categoria) {
+    return String(categoria || '').trim().toLowerCase();
+}
+
 function validarCamposObrigatorios(dados) {
-    const campos = ['nome', 'quantidadeEstoque', 'estoqueMinimo', 'categoria', 'precoCusto', 'precoVenda'];
+    const campos = ['nome', 'quantidadeEstoque', 'estoqueMinimo', 'categoria', 'precoCusto', 'precoVenda', 'fornecedorId'];
     const ausentes = campos.filter(c => dados[c] === undefined || dados[c] === null || dados[c] === '');
     if (ausentes.length > 0) {
         throw new Error(`Campos obrigatórios ausentes: ${ausentes.join(', ')}`);
     }
 }
 
+function validarFornecedorExiste(fornecedorId) {
+    const fornecedor = FornecedorModel.buscarPorId(Number(fornecedorId));
+    if (!fornecedor) {
+        throw new Error(`Fornecedor com id ${fornecedorId} não encontrado`);
+    }
+}
+
 function validarCategoria(categoria) {
-    if (!CATEGORIAS_VALIDAS.includes(categoria)) {
+    const categoriaNormalizada = normalizarCategoria(categoria);
+    if (!CATEGORIAS_VALIDAS.includes(categoriaNormalizada)) {
         throw new Error(`Categoria inválida. Valores aceitos: ${CATEGORIAS_VALIDAS.join(', ')}`);
     }
 }
@@ -38,6 +52,7 @@ function validarProduto(dados, idIgnorado = null) {
     validarCamposObrigatorios(dados);
     validarCategoria(dados.categoria);
     validarNumerosPositivos(dados);
+    validarFornecedorExiste(dados.fornecedorId);
     validarNomeUnico(dados.nome, idIgnorado);
 }
 
@@ -47,6 +62,12 @@ function listarTodos(filtros = {}) {
     let resultado = [...produtos];
     if (filtros.categoria) {
         resultado = resultado.filter(p => p.categoria === filtros.categoria.toLowerCase());
+    }
+    if (filtros.fornecedorId !== undefined) {
+        const fornecedorId = Number(filtros.fornecedorId);
+        if (!Number.isNaN(fornecedorId)) {
+            resultado = resultado.filter(p => p.fornecedorId === fornecedorId);
+        }
     }
     return resultado;
 }
@@ -63,9 +84,10 @@ function criar(dados) {
         nome: dados.nome,
         quantidadeEstoque: Number(dados.quantidadeEstoque),
         estoqueMinimo: Number(dados.estoqueMinimo),
-        categoria: dados.categoria,
+        categoria: normalizarCategoria(dados.categoria),
         precoCusto: Number(dados.precoCusto),
         precoVenda: Number(dados.precoVenda),
+        fornecedorId: Number(dados.fornecedorId),
     };
     produtos.push(novoProduto);
     return novoProduto;
@@ -84,9 +106,10 @@ function atualizar(id, dados) {
         nome: dados.nome,
         quantidadeEstoque: Number(dados.quantidadeEstoque),
         estoqueMinimo: Number(dados.estoqueMinimo),
-        categoria: dados.categoria,
+        categoria: normalizarCategoria(dados.categoria),
         precoCusto: Number(dados.precoCusto),
         precoVenda: Number(dados.precoVenda),
+        fornecedorId: Number(dados.fornecedorId),
     };
     return produtos[idx];
 }
@@ -101,6 +124,7 @@ function atualizarParcial(id, dados) {
     }
     if (dados.categoria) {
         validarCategoria(dados.categoria);
+        dados = { ...dados, categoria: normalizarCategoria(dados.categoria) };
     }
     if (dados.quantidadeEstoque !== undefined && dados.quantidadeEstoque < 0) {
         throw new Error('A quantidade em estoque não pode ser negativa');
@@ -113,6 +137,10 @@ function atualizarParcial(id, dados) {
     }
     if (dados.precoVenda !== undefined && dados.precoVenda <= 0) {
         throw new Error('O preço de venda deve ser maior que zero');
+    }
+    if (dados.fornecedorId !== undefined) {
+        validarFornecedorExiste(dados.fornecedorId);
+        dados = { ...dados, fornecedorId: Number(dados.fornecedorId) };
     }
 
     produtos[idx] = { ...produtos[idx], ...dados, id };
