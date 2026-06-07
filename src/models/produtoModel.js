@@ -1,12 +1,24 @@
-const FornecedorModel = require('./fornecedor.Model');
-
-let produtos = [
-    { id: 1, nome: 'Coca-Cola Lata', quantidadeEstoque: 48, estoqueMinimo: 10, categoria: 'bebidas', precoCusto: 2.50, precoVenda: 5.00, fornecedorId: 1 },
-    { id: 2, nome: 'Pastel frito', quantidadeEstoque: 20, estoqueMinimo: 5, categoria: 'alimentos', precoCusto: 7.00, precoVenda: 15.00, fornecedorId: 1 },
-];
-let proximoId = 3;
+const sequelize = require('../../config/localConnection');
+const { DataTypes, Op } = require('sequelize');
 
 const CATEGORIAS_VALIDAS = ['bebidas', 'alimentos', 'mercearia', 'outros'];
+
+// ── Schema ────────────────────────────────────────────────────────────────────
+
+const Produto = sequelize.define('Produto', {
+    id:                { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    nome:              { type: DataTypes.STRING, allowNull: false, unique: true },
+    quantidadeEstoque: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    estoqueMinimo:     { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    categoria:         { type: DataTypes.ENUM(...CATEGORIAS_VALIDAS), allowNull: false },
+    precoCusto:        { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    precoVenda:        { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    fornecedorId:      { type: DataTypes.INTEGER, allowNull: false },
+}, {
+    tableName: 'produto',
+    freezeTableName: true,
+    timestamps: false,
+});
 
 // ── Validações ────────────────────────────────────────────────────────────────
 
@@ -22,11 +34,10 @@ function validarCamposObrigatorios(dados) {
     }
 }
 
-function validarFornecedorExiste(fornecedorId) {
-    const fornecedor = FornecedorModel.buscarPorId(Number(fornecedorId));
-    if (!fornecedor) {
-        throw new Error(`Fornecedor com id ${fornecedorId} não encontrado`);
-    }
+async function validarFornecedorExiste(fornecedorId) {
+    const FornecedorModel = require('./fornecedor.Model');
+    const fornecedor = await FornecedorModel.buscarPorId(Number(fornecedorId));
+    if (!fornecedor) throw new Error(`Fornecedor com id ${fornecedorId} não encontrado`);
 }
 
 function validarCategoria(categoria) {
@@ -43,115 +54,95 @@ function validarNumerosPositivos(dados) {
     if (dados.precoVenda <= 0) throw new Error('O preço de venda deve ser maior que zero');
 }
 
-function validarNomeUnico(nome, idIgnorado = null) {
-    const existe = produtos.find(p => p.nome.toLowerCase() === nome.toLowerCase() && p.id !== idIgnorado);
+async function validarNomeUnico(nome, idIgnorado = null) {
+    const where = { nome };
+    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    const existe = await Produto.findOne({ where });
     if (existe) throw new Error('Já existe um produto com este nome');
 }
 
-function validarProduto(dados, idIgnorado = null) {
+async function validarProduto(dados, idIgnorado = null) {
     validarCamposObrigatorios(dados);
     validarCategoria(dados.categoria);
     validarNumerosPositivos(dados);
-    validarFornecedorExiste(dados.fornecedorId);
-    validarNomeUnico(dados.nome, idIgnorado);
+    await validarFornecedorExiste(dados.fornecedorId);
+    await validarNomeUnico(dados.nome, idIgnorado);
 }
 
 // ── Funções de dados ──────────────────────────────────────────────────────────
 
-function listarTodos(filtros = {}) {
-    let resultado = [...produtos];
-    if (filtros.categoria) {
-        resultado = resultado.filter(p => p.categoria === filtros.categoria.toLowerCase());
-    }
+async function listarTodos(filtros = {}) {
+    const where = {};
+    if (filtros.categoria) where.categoria = filtros.categoria.toLowerCase();
     if (filtros.fornecedorId !== undefined) {
-        const fornecedorId = Number(filtros.fornecedorId);
-        if (!Number.isNaN(fornecedorId)) {
-            resultado = resultado.filter(p => p.fornecedorId === fornecedorId);
-        }
+        const fid = Number(filtros.fornecedorId);
+        if (!Number.isNaN(fid)) where.fornecedorId = fid;
     }
-    return resultado;
+    return Produto.findAll({ where, order: [['id', 'ASC']] });
 }
 
-function buscarPorId(id) {
-    return produtos.find(p => p.id === id) || null;
+async function buscarPorId(id) {
+    return Produto.findByPk(id);
 }
 
-function criar(dados) {
-    validarProduto(dados);
-
-    const novoProduto = {
-        id: proximoId++,
-        nome: dados.nome,
+async function criar(dados) {
+    await validarProduto(dados);
+    return Produto.create({
+        nome:              dados.nome,
         quantidadeEstoque: Number(dados.quantidadeEstoque),
-        estoqueMinimo: Number(dados.estoqueMinimo),
-        categoria: normalizarCategoria(dados.categoria),
-        precoCusto: Number(dados.precoCusto),
-        precoVenda: Number(dados.precoVenda),
-        fornecedorId: Number(dados.fornecedorId),
-    };
-    produtos.push(novoProduto);
-    return novoProduto;
+        estoqueMinimo:     Number(dados.estoqueMinimo),
+        categoria:         normalizarCategoria(dados.categoria),
+        precoCusto:        Number(dados.precoCusto),
+        precoVenda:        Number(dados.precoVenda),
+        fornecedorId:      Number(dados.fornecedorId),
+    });
 }
 
 // PUT - exige objeto completo
-function atualizar(id, dados) {
-    const idx = produtos.findIndex(p => p.id === id);
-    if (idx === -1) return null;
-
-    // Passa o id atual para não detectar o próprio produto como duplicado
-    validarProduto(dados, id);
-
-    produtos[idx] = {
-        id,
-        nome: dados.nome,
+async function atualizar(id, dados) {
+    const produto = await Produto.findByPk(id);
+    if (!produto) return null;
+    await validarProduto(dados, id);
+    await produto.update({
+        nome:              dados.nome,
         quantidadeEstoque: Number(dados.quantidadeEstoque),
-        estoqueMinimo: Number(dados.estoqueMinimo),
-        categoria: normalizarCategoria(dados.categoria),
-        precoCusto: Number(dados.precoCusto),
-        precoVenda: Number(dados.precoVenda),
-        fornecedorId: Number(dados.fornecedorId),
-    };
-    return produtos[idx];
+        estoqueMinimo:     Number(dados.estoqueMinimo),
+        categoria:         normalizarCategoria(dados.categoria),
+        precoCusto:        Number(dados.precoCusto),
+        precoVenda:        Number(dados.precoVenda),
+        fornecedorId:      Number(dados.fornecedorId),
+    });
+    return produto;
 }
 
 // PATCH - atualiza parcialmente
-function atualizarParcial(id, dados) {
-    const idx = produtos.findIndex(p => p.id === id);
-    if (idx === -1) return null;
+async function atualizarParcial(id, dados) {
+    const produto = await Produto.findByPk(id);
+    if (!produto) return null;
 
-    if (dados.nome && dados.nome !== produtos[idx].nome) {
-        validarNomeUnico(dados.nome, id);
-    }
+    if (dados.nome && dados.nome !== produto.nome) await validarNomeUnico(dados.nome, id);
     if (dados.categoria) {
         validarCategoria(dados.categoria);
         dados = { ...dados, categoria: normalizarCategoria(dados.categoria) };
     }
-    if (dados.quantidadeEstoque !== undefined && dados.quantidadeEstoque < 0) {
-        throw new Error('A quantidade em estoque não pode ser negativa');
-    }
-    if (dados.estoqueMinimo !== undefined && dados.estoqueMinimo < 0) {
-        throw new Error('O estoque mínimo não pode ser negativo');
-    }
-    if (dados.precoCusto !== undefined && dados.precoCusto <= 0) {
-        throw new Error('O preço de custo deve ser maior que zero');
-    }
-    if (dados.precoVenda !== undefined && dados.precoVenda <= 0) {
-        throw new Error('O preço de venda deve ser maior que zero');
-    }
+    if (dados.quantidadeEstoque !== undefined && dados.quantidadeEstoque < 0) throw new Error('A quantidade em estoque não pode ser negativa');
+    if (dados.estoqueMinimo !== undefined && dados.estoqueMinimo < 0) throw new Error('O estoque mínimo não pode ser negativo');
+    if (dados.precoCusto !== undefined && dados.precoCusto <= 0) throw new Error('O preço de custo deve ser maior que zero');
+    if (dados.precoVenda !== undefined && dados.precoVenda <= 0) throw new Error('O preço de venda deve ser maior que zero');
     if (dados.fornecedorId !== undefined) {
-        validarFornecedorExiste(dados.fornecedorId);
+        await validarFornecedorExiste(dados.fornecedorId);
         dados = { ...dados, fornecedorId: Number(dados.fornecedorId) };
     }
 
-    produtos[idx] = { ...produtos[idx], ...dados, id };
-    return produtos[idx];
+    await produto.update(dados);
+    return produto;
 }
 
-function remover(id) {
-    const idx = produtos.findIndex(p => p.id === id);
-    if (idx === -1) return false;
-    produtos.splice(idx, 1);
+async function remover(id) {
+    const produto = await Produto.findByPk(id);
+    if (!produto) return false;
+    await produto.destroy();
     return true;
 }
 
-module.exports = { listarTodos, buscarPorId, criar, atualizar, atualizarParcial, remover };
+module.exports = { Produto, listarTodos, buscarPorId, criar, atualizar, atualizarParcial, remover };

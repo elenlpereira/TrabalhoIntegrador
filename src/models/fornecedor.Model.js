@@ -1,19 +1,9 @@
-let fornecedores = [
-    {
-        id: 1,
-        razaoSocial: 'Distribuidora ABC Ltda',
-        cnpj: '11222333000181',
-        telefone: '49933334444',
-        email: 'contato@abc.com',
-        cidade: 'Chapecó',
-        categoriaProduto: 'bebidas'
-    }
-];
-let proximoId = 2;
+const sequelize = require('../../config/localConnection');
+const { DataTypes, Op } = require('sequelize');
  
 const CATEGORIAS_VALIDAS = ['bebidas', 'alimentos', 'mercearia', 'outros'];
  
-// ── Validações ────────────────────────────────────────────────────────────────
+// ── Schema ──
  
 function normalizarCnpj(cnpj) {
     return cnpj.replace(/[.\-\/]/g, '');
@@ -46,19 +36,39 @@ function validarCategoria(categoria) {
     }
 }
  
-function validarCnpjUnico(cnpj, idIgnorado = null) {
-    const cnpjNormalizado = normalizarCnpj(cnpj);
-    const existe = fornecedores.find(f => normalizarCnpj(f.cnpj) === cnpjNormalizado && f.id !== idIgnorado);
+// ── Schema ────────────────────────────────────────────────────────────────────
+
+const Fornecedor = sequelize.define('Fornecedor', {
+    id:               { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    razaoSocial:      { type: DataTypes.STRING, allowNull: false },
+    cnpj:             { type: DataTypes.STRING(14), allowNull: false, unique: true },
+    telefone:         { type: DataTypes.STRING(20), allowNull: false },
+    email:            { type: DataTypes.STRING, allowNull: false },
+    cidade:           { type: DataTypes.STRING, allowNull: false },
+    categoriaProduto: { type: DataTypes.ENUM(...CATEGORIAS_VALIDAS), allowNull: false },
+}, {
+    tableName: 'fornecedor',
+    freezeTableName: true,
+    timestamps: false,
+});
+
+async function validarCnpjUnico(cnpj, idIgnorado = null) {
+    const cnpjNorm = normalizarCnpj(cnpj);
+    const where = { cnpj: cnpjNorm };
+    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    const existe = await Fornecedor.findOne({ where });
     if (existe) throw new Error('CNPJ já cadastrado');
 }
- 
-function validarEmailUnico(email, idIgnorado = null) {
+
+async function validarEmailUnico(email, idIgnorado = null) {
     if (!email) return;
-    const existe = fornecedores.find(f => f.email === email && f.id !== idIgnorado);
+    const where = { email };
+    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    const existe = await Fornecedor.findOne({ where });
     if (existe) throw new Error('E-mail já cadastrado');
 }
- 
-function validarFornecedor(dados, idIgnorado = null) {
+
+async function validarFornecedor(dados, idIgnorado = null) {
     validarCamposObrigatorios(dados);
     if (!validarFormatoCnpj(dados.cnpj)) {
         throw new Error('Formato de CNPJ inválido. Use 00000000000000 ou 00.000.000/0000-00');
@@ -67,90 +77,84 @@ function validarFornecedor(dados, idIgnorado = null) {
         throw new Error('Formato de e-mail inválido');
     }
     validarCategoria(dados.categoriaProduto);
-    validarCnpjUnico(dados.cnpj, idIgnorado);
-    validarEmailUnico(dados.email, idIgnorado);
+    await validarCnpjUnico(dados.cnpj, idIgnorado);
+    await validarEmailUnico(dados.email, idIgnorado);
 }
  
 // ── Funções de dados ──────────────────────────────────────────────────────────
- 
-function listarTodos() {
-    return fornecedores;
+
+async function listarTodos() {
+    return Fornecedor.findAll({ order: [['id', 'ASC']] });
 }
- 
-function buscarPorId(id) {
-    return fornecedores.find(f => f.id === id) || null;
+
+async function buscarPorId(id) {
+    return Fornecedor.findByPk(id);
 }
- 
-function buscarPorCNPJ(cnpj) {
-    const cnpjNormalizado = normalizarCnpj(cnpj);
-    return fornecedores.find(f => normalizarCnpj(f.cnpj) === cnpjNormalizado) || null;
+
+async function buscarPorCNPJ(cnpj) {
+    return Fornecedor.findOne({ where: { cnpj: normalizarCnpj(cnpj) } });
 }
- 
-function buscarPorNome(nome) {
-    const termo = nome.toLowerCase();
-    return fornecedores.filter(f => f.razaoSocial.toLowerCase().includes(termo));
+
+async function buscarPorNome(nome) {
+    return Fornecedor.findAll({ where: { razaoSocial: { [Op.iLike]: `%${nome}%` } } });
 }
- 
-function criar(dados) {
-    validarFornecedor(dados);
-    const novoFornecedor = {
-        id: proximoId++,
-        razaoSocial: dados.razaoSocial,
-        cnpj: normalizarCnpj(dados.cnpj),
-        telefone: dados.telefone,
-        email: dados.email,
-        cidade: dados.cidade,
+
+async function criar(dados) {
+    await validarFornecedor(dados);
+    return Fornecedor.create({
+        razaoSocial:      dados.razaoSocial,
+        cnpj:             normalizarCnpj(dados.cnpj),
+        telefone:         dados.telefone,
+        email:            dados.email,
+        cidade:           dados.cidade,
         categoriaProduto: normalizarCategoria(dados.categoriaProduto),
-    };
-    fornecedores.push(novoFornecedor);
-    return novoFornecedor;
+    });
 }
- 
+
 // PUT - exige objeto completo
-function atualizar(id, dados) {
-    const idx = fornecedores.findIndex(f => f.id === id);
-    if (idx === -1) return null;
-    validarFornecedor(dados, id);
-    fornecedores[idx] = {
-        id,
-        razaoSocial: dados.razaoSocial,
-        cnpj: normalizarCnpj(dados.cnpj),
-        telefone: dados.telefone,
-        email: dados.email,
-        cidade: dados.cidade,
+async function atualizar(id, dados) {
+    const fornecedor = await Fornecedor.findByPk(id);
+    if (!fornecedor) return null;
+    await validarFornecedor(dados, id);
+    await fornecedor.update({
+        razaoSocial:      dados.razaoSocial,
+        cnpj:             normalizarCnpj(dados.cnpj),
+        telefone:         dados.telefone,
+        email:            dados.email,
+        cidade:           dados.cidade,
         categoriaProduto: normalizarCategoria(dados.categoriaProduto),
-    };
-    return fornecedores[idx];
+    });
+    return fornecedor;
 }
- 
+
 // PATCH - atualiza parcialmente
-function atualizarParcial(id, dados) {
-    const idx = fornecedores.findIndex(f => f.id === id);
-    if (idx === -1) return null;
- 
-    if (dados.cnpj && normalizarCnpj(dados.cnpj) !== normalizarCnpj(fornecedores[idx].cnpj)) {
+async function atualizarParcial(id, dados) {
+    const fornecedor = await Fornecedor.findByPk(id);
+    if (!fornecedor) return null;
+
+    if (dados.cnpj && normalizarCnpj(dados.cnpj) !== fornecedor.cnpj) {
         if (!validarFormatoCnpj(dados.cnpj)) throw new Error('Formato de CNPJ inválido. Use 00000000000000 ou 00.000.000/0000-00');
-        validarCnpjUnico(dados.cnpj, id);
+        await validarCnpjUnico(dados.cnpj, id);
         dados = { ...dados, cnpj: normalizarCnpj(dados.cnpj) };
     }
-    if (dados.email && dados.email !== fornecedores[idx].email) {
+    if (dados.email && dados.email !== fornecedor.email) {
         if (!validarEmail(dados.email)) throw new Error('Formato de e-mail inválido');
-        validarEmailUnico(dados.email, id);
+        await validarEmailUnico(dados.email, id);
     }
     if (dados.categoriaProduto) {
         validarCategoria(dados.categoriaProduto);
         dados = { ...dados, categoriaProduto: normalizarCategoria(dados.categoriaProduto) };
     }
- 
-    fornecedores[idx] = { ...fornecedores[idx], ...dados, id };
-    return fornecedores[idx];
+
+    await fornecedor.update(dados);
+    return fornecedor;
 }
- 
-function remover(id) {
-    const idx = fornecedores.findIndex(f => f.id === id);
-    if (idx === -1) return false;
-    fornecedores.splice(idx, 1);
+
+async function remover(id) {
+    const fornecedor = await Fornecedor.findByPk(id);
+    if (!fornecedor) return false;
+    await fornecedor.destroy();
     return true;
 }
- 
-module.exports = { listarTodos, buscarPorId, buscarPorCNPJ, buscarPorNome, criar, atualizar, atualizarParcial, remover, CATEGORIAS_VALIDAS };
+
+module.exports = { Fornecedor, listarTodos, buscarPorId, buscarPorCNPJ, buscarPorNome, criar, atualizar, atualizarParcial, remover, CATEGORIAS_VALIDAS };

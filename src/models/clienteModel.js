@@ -1,9 +1,21 @@
-// id: 1 é reservado para Consumidor Final — não pode ser editado nem removido
-const CONSUMIDOR_FINAL = { id: 1, nome: 'Consumidor Final', cpf: '00000000000', telefone: null, email: null };
+const sequelize = require('../../config/localConnection');
+const { DataTypes, Op } = require('sequelize');
+
 const CONSUMIDOR_FINAL_ID = 1;
- 
-let clientes = [];
-let proximoId = 2;
+
+// ── Schema ──
+
+const Cliente = sequelize.define('Cliente', {
+    id:       { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    nome:     { type: DataTypes.STRING(100), allowNull: false },
+    cpf:      { type: DataTypes.STRING(11), allowNull: false, unique: true },
+    telefone: { type: DataTypes.STRING(20) },
+    email:    { type: DataTypes.STRING },
+}, {
+    tableName: 'cliente',
+    freezeTableName: true,
+    timestamps: false,
+});
  
 // ── Validações ────────────────────────────────────────────────────────────────
  
@@ -25,23 +37,23 @@ function validarCamposObrigatorios(dados) {
     }
 }
  
-function validarCpfUnico(cpf, idIgnorado = null) {
-    const cpfNormalizado = normalizarCpf(cpf);
-     // Protege o CPF do Consumidor Final de ser cadastrado em outro cliente
-    if (cpfNormalizado === CONSUMIDOR_FINAL.cpf && idIgnorado !== CONSUMIDOR_FINAL_ID) {
-        throw new Error('CPF já cadastrado');
-    }
-    const existe = clientes.find(c => normalizarCpf(c.cpf) === cpfNormalizado && c.id !== idIgnorado);
+async function validarCpfUnico(cpf, idIgnorado = null) {
+    const cpfNorm = normalizarCpf(cpf);
+    const where = { cpf: cpfNorm };
+    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    const existe = await Cliente.findOne({ where });
     if (existe) throw new Error('CPF já cadastrado');
 }
- 
-function validarEmailUnico(email, idIgnorado = null) {
+
+async function validarEmailUnico(email, idIgnorado = null) {
     if (!email) return;
-    const existe = clientes.find(c => c.email === email && c.id !== idIgnorado);
+    const where = { email };
+    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    const existe = await Cliente.findOne({ where });
     if (existe) throw new Error('E-mail já cadastrado');
 }
- 
-function validarCliente(dados, idIgnorado = null) {
+
+async function validarCliente(dados, idIgnorado = null) {
     validarCamposObrigatorios(dados);
     if (!validarFormatoCpf(dados.cpf)) {
         throw new Error('Formato de CPF inválido. Use 00000000000 ou 000.000.000-00');
@@ -49,96 +61,85 @@ function validarCliente(dados, idIgnorado = null) {
     if (dados.email && !validarEmail(dados.email)) {
         throw new Error('Formato de e-mail inválido');
     }
-    validarCpfUnico(dados.cpf, idIgnorado);
-    validarEmailUnico(dados.email, idIgnorado);
+    await validarCpfUnico(dados.cpf, idIgnorado);
+    await validarEmailUnico(dados.email, idIgnorado);
 }
+
 function isConsumidorFinal(id) {
     return Number(id) === CONSUMIDOR_FINAL_ID;
 }
  
 // ── Funções de dados ──────────────────────────────────────────────────────────
- 
-function listarTodos() {
-     return [CONSUMIDOR_FINAL, ...clientes];
-}
- 
-function buscarPorId(id) {
-    if (isConsumidorFinal(id)) return CONSUMIDOR_FINAL;
-    return clientes.find(c => c.id === id) || null;
-}
- 
-function buscarPorCPF(cpf) {
-    const cpfNormalizado = normalizarCpf(cpf);
-    if (cpfNormalizado === CONSUMIDOR_FINAL.cpf) return CONSUMIDOR_FINAL;
-    return clientes.find(c => normalizarCpf(c.cpf) === cpfNormalizado) || null;
+
+async function listarTodos() {
+    return Cliente.findAll({ order: [['id', 'ASC']] });
 }
 
-function buscarPorNome(nome) {
-    const termo = nome.toLowerCase();
-    const resultadoCF = CONSUMIDOR_FINAL.nome.toLowerCase().includes(termo) ? [CONSUMIDOR_FINAL] : [];
-    const resultadoClientes = clientes.filter(c => c.nome.toLowerCase().includes(termo));
-    return [...resultadoCF, ...resultadoClientes];
+async function buscarPorId(id) {
+    return Cliente.findByPk(id);
 }
- 
-function criar(dados) {
-    validarCliente(dados);
- 
-    const novoCliente = {
-        id: proximoId++,
-        nome: dados.nome,
-        cpf: normalizarCpf(dados.cpf),
+
+async function buscarPorCPF(cpf) {
+    return Cliente.findOne({ where: { cpf: normalizarCpf(cpf) } });
+}
+
+async function buscarPorNome(nome) {
+    return Cliente.findAll({ where: { nome: { [Op.iLike]: `%${nome}%` } }, order: [['id', 'ASC']] });
+}
+
+async function criar(dados) {
+    await validarCliente(dados);
+    return Cliente.create({
+        nome:     dados.nome,
+        cpf:      normalizarCpf(dados.cpf),
         telefone: dados.telefone || null,
-        email: dados.email || null,
-    };
-    clientes.push(novoCliente);
-    return novoCliente;
+        email:    dados.email || null,
+    });
 }
- 
+
 // PUT - exige objeto completo
-function atualizar(id, dados) {
+async function atualizar(id, dados) {
     if (isConsumidorFinal(id)) throw new Error('Consumidor Final não pode ser editado');
-    const idx = clientes.findIndex(c => c.id === id);
-    if (idx === -1) return null;
- 
-    validarCliente(dados, id);
- 
-    clientes[idx] = {
-        id,
-        nome: dados.nome,
-        cpf: normalizarCpf(dados.cpf),
+    const cliente = await Cliente.findByPk(id);
+    if (!cliente) return null;
+
+    await validarCliente(dados, id);
+    await cliente.update({
+        nome:     dados.nome,
+        cpf:      normalizarCpf(dados.cpf),
         telefone: dados.telefone || null,
-        email: dados.email || null,
-    };
-    return clientes[idx];
+        email:    dados.email || null,
+    });
+    return cliente;
 }
- 
+
 // PATCH - atualiza parcialmente
-function atualizarParcial(id, dados) {
+async function atualizarParcial(id, dados) {
     if (isConsumidorFinal(id)) throw new Error('Consumidor Final não pode ser editado');
-    const idx = clientes.findIndex(c => c.id === id);
-    if (idx === -1) return null;
- 
-    if (dados.cpf && normalizarCpf(dados.cpf) !== normalizarCpf(clientes[idx].cpf)) {
+    const cliente = await Cliente.findByPk(id);
+    if (!cliente) return null;
+
+    if (dados.cpf && normalizarCpf(dados.cpf) !== cliente.cpf) {
         if (!validarFormatoCpf(dados.cpf)) throw new Error('Formato de CPF inválido. Use 00000000000 ou 000.000.000-00');
-        validarCpfUnico(dados.cpf, id);
+        await validarCpfUnico(dados.cpf, id);
         dados = { ...dados, cpf: normalizarCpf(dados.cpf) };
     }
- 
-    if (dados.email && dados.email !== clientes[idx].email) {
+
+    if (dados.email && dados.email !== cliente.email) {
         if (!validarEmail(dados.email)) throw new Error('Formato de e-mail inválido');
-        validarEmailUnico(dados.email, id);
+        await validarEmailUnico(dados.email, id);
     }
- 
-    clientes[idx] = { ...clientes[idx], ...dados, id };
-    return clientes[idx];
+
+    await cliente.update(dados);
+    return cliente;
 }
- 
-function remover(id) {
+
+async function remover(id) {
     if (isConsumidorFinal(id)) throw new Error('Consumidor Final não pode ser removido');
-    const idx = clientes.findIndex(c => c.id === id);
-    if (idx === -1) return false;
-    clientes.splice(idx, 1);
+    const cliente = await Cliente.findByPk(id);
+    if (!cliente) return false;
+    await cliente.destroy();
     return true;
 }
- 
-module.exports = { listarTodos, buscarPorNome, buscarPorId, buscarPorCPF, criar, atualizar, atualizarParcial, remover, CONSUMIDOR_FINAL_ID};
+
+module.exports = { Cliente, CONSUMIDOR_FINAL_ID, listarTodos, buscarPorNome, buscarPorId, buscarPorCPF, criar, atualizar, atualizarParcial, remover };

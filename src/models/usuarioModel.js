@@ -1,9 +1,20 @@
 const bcrypt = require('bcryptjs');
+const sequelize = require('../../config/localConnection');
+const { DataTypes, Op } = require('sequelize');
 
-let usuarios = [
-    { id: 1, nomeCompleto: 'Admin Sistema', email: 'admin@sistema.com', senha: '$2a$10$exampleHashedPasswordHere', perfil: 'Gerente' },
-];
-let proximoId = 2;
+// ── Schema ──
+
+const Usuario = sequelize.define('Usuario', {
+    id:           { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    nomeCompleto: { type: DataTypes.STRING(100), allowNull: false },
+    email:        { type: DataTypes.STRING, allowNull: false, unique: true },
+    senha:        { type: DataTypes.STRING, allowNull: false },
+    perfil:       { type: DataTypes.ENUM('Atendente', 'Gerente'), allowNull: false },
+}, {
+    tableName: 'usuario',
+    freezeTableName: true,
+    timestamps: false,
+});
 
 // ── Validações ────────────────────────────────────────────────────────────────
 
@@ -29,12 +40,14 @@ function validarPerfil(perfil) {
     }
 }
 
-function validarEmailUnico(email, idIgnorado = null) {
-    const existe = usuarios.find(u => u.email === email && u.id !== idIgnorado);
+async function validarEmailUnico(email, idIgnorado = null) {
+    const where = { email };
+    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    const existe = await Usuario.findOne({ where });
     if (existe) throw new Error('E-mail já cadastrado');
 }
 
-function validarUsuario(dados, idIgnorado = null) {
+async function validarUsuario(dados, idIgnorado = null) {
     validarCamposObrigatorios(dados);
     if (!validarEmail(dados.email)) {
         throw new Error('Formato de e-mail inválido');
@@ -44,93 +57,77 @@ function validarUsuario(dados, idIgnorado = null) {
     }
     validarSenhasIguais(dados.senha, dados.confirmacaoSenha);
     validarPerfil(dados.perfil);
-    validarEmailUnico(dados.email, idIgnorado);
+    await validarEmailUnico(dados.email, idIgnorado);
 }
 
 // ── Funções de dados ──────────────────────────────────────────────────────────
 
-function listarTodos() {
-    return usuarios.map(({ senha, ...semSenha }) => semSenha);
+async function listarTodos() {
+    return Usuario.findAll({ attributes: { exclude: ['senha'] }, order: [['id', 'ASC']] });
 }
 
-function buscarPorId(id) {
-    const usuario = usuarios.find(u => u.id === id);
-    if (!usuario) return null;
-    const { senha, ...semSenha } = usuario;
+async function buscarPorId(id) {
+    const u = await Usuario.findByPk(id);
+    if (!u) return null;
+    const { senha, ...semSenha } = u.toJSON();
     return semSenha;
 }
 
-function criar(dados) {
-    validarUsuario(dados);
-
+async function criar(dados) {
+    await validarUsuario(dados);
     const senhaHash = bcrypt.hashSync(dados.senha, 10);
-    const novoUsuario = {
-        id: proximoId++,
+    const novo = await Usuario.create({
         nomeCompleto: dados.nomeCompleto,
-        email: dados.email,
-        senha: senhaHash,
-        perfil: dados.perfil,
-    };
-    usuarios.push(novoUsuario);
-
-    const { senha, ...semSenha } = novoUsuario;
+        email:        dados.email,
+        senha:        senhaHash,
+        perfil:       dados.perfil,
+    });
+    const { senha, ...semSenha } = novo.toJSON();
     return semSenha;
 }
 
 // PUT - exige objeto completo
-function atualizar(id, dados) {
-    const idx = usuarios.findIndex(u => u.id === id);
-    if (idx === -1) return null;
-
-    // Passa o id atual para não detectar o próprio usuário como duplicado
-    validarUsuario(dados, id);
-
-    const senhaHash = bcrypt.hashSync(dados.senha, 10);
-    usuarios[idx] = {
-        id,
+async function atualizar(id, dados) {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) return null;
+    await validarUsuario(dados, id);
+    await usuario.update({
         nomeCompleto: dados.nomeCompleto,
-        email: dados.email,
-        senha: senhaHash,
-        perfil: dados.perfil,
-    };
-
-    const { senha, ...semSenha } = usuarios[idx];
+        email:        dados.email,
+        senha:        bcrypt.hashSync(dados.senha, 10),
+        perfil:       dados.perfil,
+    });
+    const { senha, ...semSenha } = usuario.toJSON();
     return semSenha;
 }
 
 // PATCH - atualiza parcialmente
-function atualizarParcial(id, dados) {
-    const idx = usuarios.findIndex(u => u.id === id);
-    if (idx === -1) return null;
+async function atualizarParcial(id, dados) {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) return null;
 
-    if (dados.email && dados.email !== usuarios[idx].email) {
+    if (dados.email && dados.email !== usuario.email) {
         if (!validarEmail(dados.email)) throw new Error('Formato de e-mail inválido');
-        validarEmailUnico(dados.email, id);
+        await validarEmailUnico(dados.email, id);
     }
-
-    if (dados.perfil) {
-        validarPerfil(dados.perfil);
-    }
-
+    if (dados.perfil) validarPerfil(dados.perfil);
     if (dados.senha) {
         if (!dados.confirmacaoSenha) throw new Error('Confirmação de senha obrigatória ao alterar a senha');
         validarSenhasIguais(dados.senha, dados.confirmacaoSenha);
         if (dados.senha.length < 6) throw new Error('A senha deve ter no mínimo 6 caracteres');
         dados = { ...dados, senha: bcrypt.hashSync(dados.senha, 10) };
     }
-
     const { confirmacaoSenha, ...dadosSemConfirmacao } = dados;
-    usuarios[idx] = { ...usuarios[idx], ...dadosSemConfirmacao, id };
-
-    const { senha, ...semSenha } = usuarios[idx];
+    await usuario.update(dadosSemConfirmacao);
+    const { senha, ...semSenha } = usuario.toJSON();
     return semSenha;
 }
 
-function remover(id) {
-    const idx = usuarios.findIndex(u => u.id === id);
-    if (idx === -1) return false;
-    usuarios.splice(idx, 1);
+async function remover(id) {
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) return false;
+    await usuario.destroy();
     return true;
 }
 
-module.exports = { listarTodos, buscarPorId, criar, atualizar, atualizarParcial, remover };
+module.exports = { Usuario, listarTodos, buscarPorId, criar, atualizar, atualizarParcial, remover };

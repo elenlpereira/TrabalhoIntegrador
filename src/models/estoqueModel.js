@@ -2,8 +2,8 @@ const ProdutoModel = require('./produtoModel');
 
 // ── Validações 
 
-function validarProdutoExiste(produtoId) {
-    const produto = ProdutoModel.buscarPorId(produtoId);
+async function validarProdutoExiste(produtoId) {
+    const produto = await ProdutoModel.buscarPorId(produtoId);
     if (!produto) throw new Error(`Produto com id ${produtoId} não encontrado`);
     return produto;
 }
@@ -25,36 +25,31 @@ function validarEstoqueSuficiente(produto, quantidade) {
 // ── Operações de movimentação 
 
 // Soma quantidade ao estoque do produto (compra / estorno de saída)
-function entrada(produtoId, quantidade) {
-    validarProdutoExiste(produtoId);
+async function entrada(produtoId, quantidade) {
+    await validarProdutoExiste(produtoId);
     validarQuantidade(quantidade);
-
     const qtd = Number(quantidade);
-    ProdutoModel.atualizarParcial(produtoId, {
-        quantidadeEstoque: ProdutoModel.buscarPorId(produtoId).quantidadeEstoque + qtd,
+    await ProdutoModel.atualizarParcial(produtoId, {
+        quantidadeEstoque: (await ProdutoModel.buscarPorId(produtoId)).quantidadeEstoque + qtd,
     });
-
     return ProdutoModel.buscarPorId(produtoId);
 }
 
 // Subtrai quantidade do estoque do produto (venda / saída manual)
-function saida(produtoId, quantidade) {
-    const produto = validarProdutoExiste(produtoId);
+async function saida(produtoId, quantidade) {
+    const produto = await validarProdutoExiste(produtoId);
     validarQuantidade(quantidade);
-
     const qtd = Number(quantidade);
     validarEstoqueSuficiente(produto, qtd);
-
-    ProdutoModel.atualizarParcial(produtoId, {
+    await ProdutoModel.atualizarParcial(produtoId, {
         quantidadeEstoque: produto.quantidadeEstoque - qtd,
     });
-
     return ProdutoModel.buscarPorId(produtoId);
 }
 
 // Retorna true se o estoque atual estiver igual ou abaixo do mínimo
-function verificarEstoqueMinimo(produtoId) {
-    const produto = validarProdutoExiste(produtoId);
+async function verificarEstoqueMinimo(produtoId) {
+    const produto = await validarProdutoExiste(produtoId);
     return {
         produtoId: produto.id,
         nome: produto.nome,
@@ -65,8 +60,8 @@ function verificarEstoqueMinimo(produtoId) {
 }
 
 // Retorna todos os produtos com estoque igual ou abaixo do mínimo
-function listarAbaixoDoMinimo() {
-    const produtos = ProdutoModel.listarTodos();
+async function listarAbaixoDoMinimo() {
+    const produtos = await ProdutoModel.listarTodos();
     return produtos.filter(p => p.quantidadeEstoque <= p.estoqueMinimo);
 }
 

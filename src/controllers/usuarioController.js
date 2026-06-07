@@ -2,33 +2,33 @@ const UsuarioModel = require('../models/usuarioModel');
 const RESP_HTTP = require('../../consts');
 const helper = require('./helpers');
 
-function listar(req, res) {
-    const usuarios = UsuarioModel.listarTodos();
+async function listar(req, res) {
+    const usuarios = await UsuarioModel.listarTodos();
     res.status(RESP_HTTP.OK).json({ total: usuarios.length, usuarios });
 }
 
-function buscar(req, res) {
+async function buscar(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
-    const usuario = UsuarioModel.buscarPorId(id);
+    const usuario = await UsuarioModel.buscarPorId(id);
     if (!usuario) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Usuário não encontrado' });
     res.status(RESP_HTTP.OK).json(usuario);
 }
 
-function criar(req, res) {
+async function criar(req, res) {
     try {
-        const novoUsuario = UsuarioModel.criar(req.body);
+        const novoUsuario = await UsuarioModel.criar(req.body);
         res.status(RESP_HTTP.CREATED).set('Location', '/api/usuarios/' + novoUsuario.id).json(novoUsuario);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
     }
 }
 
-function atualizar(req, res) {
+async function atualizar(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
     try {
-        const usuario = UsuarioModel.atualizar(id, req.body);
+        const usuario = await UsuarioModel.atualizar(id, req.body);
         if (!usuario) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Usuário não encontrado' });
         res.status(RESP_HTTP.OK).json(usuario);
     } catch (err) {
@@ -36,11 +36,11 @@ function atualizar(req, res) {
     }
 }
 
-function atualizarParcial(req, res) {
+async function atualizarParcial(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
     try {
-        const usuario = UsuarioModel.atualizarParcial(id, req.body);
+        const usuario = await UsuarioModel.atualizarParcial(id, req.body);
         if (!usuario) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Usuário não encontrado' });
         res.status(RESP_HTTP.OK).json(usuario);
     } catch (err) {
@@ -48,12 +48,16 @@ function atualizarParcial(req, res) {
     }
 }
 
-function remover(req, res) {
+async function remover(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
-    const ok = UsuarioModel.remover(id);
-    if (!ok) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Usuário não encontrado' });
-    res.status(RESP_HTTP.NO_CONTENT).send();
+    try {
+        const ok = await UsuarioModel.remover(id);
+        if (!ok) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Usuário não encontrado' });
+        res.status(RESP_HTTP.NO_CONTENT).send();
+    } catch (err) {
+        res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
+    }
 }
 
 module.exports = { listar, buscar, criar, atualizar, atualizarParcial, remover };
