@@ -1,8 +1,26 @@
+const sequelize = require('../../config/localConnection');
+const { DataTypes } = require('sequelize');
 const EstoqueModel = require('./estoqueModel');
 const FornecedorModel = require('./fornecedor.Model');
 
-let compras = [];
-let proximoId = 1;
+// ── Schema ──
+
+const Compra = sequelize.define('Compra', {
+    id:               { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    produtoId:        { type: DataTypes.INTEGER },
+    nomeProduto:      { type: DataTypes.STRING, allowNull: false },
+    quantidade:       { type: DataTypes.INTEGER, allowNull: false },
+    fornecedorId:     { type: DataTypes.INTEGER },
+    nomeFornecedor:   { type: DataTypes.STRING, allowNull: false },
+    custoUnitario:    { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    totalCusto:       { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    numeroNotaFiscal: { type: DataTypes.STRING },
+    dataRecebimento:  { type: DataTypes.DATEONLY, allowNull: false },
+}, {
+    tableName: 'compra',
+    freezeTableName: true,
+    timestamps: false,
+});
 
 // ── Validações ──
 
@@ -14,8 +32,8 @@ function validarCamposObrigatorios(dados) {
     }
 }
 
-function validarFornecedor(fornecedorId) {
-    const fornecedor = FornecedorModel.buscarPorId(Number(fornecedorId));
+async function validarFornecedor(fornecedorId) {
+    const fornecedor = await FornecedorModel.buscarPorId(Number(fornecedorId));
     if (!fornecedor) throw new Error(`Fornecedor com id ${fornecedorId} não encontrado`);
     return fornecedor;
 }
@@ -24,55 +42,47 @@ function validarData(data) {
     if (isNaN(Date.parse(data))) throw new Error('Data de recebimento inválida');
 }
 
-function validarCompra(dados) {
+async function validarCompra(dados) {
     validarCamposObrigatorios(dados);
-    validarFornecedor(dados.fornecedorId);
+    await validarFornecedor(dados.fornecedorId);
     validarData(dados.dataRecebimento);
     if (Number(dados.custoUnitario) <= 0) throw new Error('O custo unitário deve ser maior que zero');
 }
 
 // ── Funções de dados ──
 
-function listarTodos() {
-    return [...compras];
+async function listarTodos() {
+    return Compra.findAll({ order: [['id', 'ASC']] });
 }
 
-function buscarPorId(id) {
-    return compras.find(c => c.id === id) || null;
+async function buscarPorId(id) {
+    return Compra.findByPk(id);
 }
 
-function criar(dados) {
-    validarCompra(dados);
-
-    const fornecedor = validarFornecedor(dados.fornecedorId);
+async function criar(dados) {
+    await validarCompra(dados);
+    const fornecedor = await validarFornecedor(dados.fornecedorId);
     const quantidade = Number(dados.quantidade);
-    const produtoAtualizado = EstoqueModel.entrada(Number(dados.produtoId), quantidade);
-
-    const novaCompra = {
-        id: proximoId++,
-        produtoId: Number(dados.produtoId),
-        nomeProduto: produtoAtualizado.nome,
+    const produtoAtualizado = await EstoqueModel.entrada(Number(dados.produtoId), quantidade);
+    return Compra.create({
+        produtoId:        Number(dados.produtoId),
+        nomeProduto:      produtoAtualizado.nome,
         quantidade,
-        fornecedorId: Number(dados.fornecedorId),
-        nomeFornecedor: fornecedor.razaoSocial,
-        custoUnitario: Number(dados.custoUnitario),
-        totalCusto: quantidade * Number(dados.custoUnitario),
+        fornecedorId:     Number(dados.fornecedorId),
+        nomeFornecedor:   fornecedor.razaoSocial,
+        custoUnitario:    Number(dados.custoUnitario),
+        totalCusto:       quantidade * Number(dados.custoUnitario),
         numeroNotaFiscal: dados.numeroNotaFiscal || null,
-        dataRecebimento: dados.dataRecebimento,
-    };
-
-    compras.push(novaCompra);
-    return novaCompra;
+        dataRecebimento:  dados.dataRecebimento,
+    });
 }
 
-function remover(id) {
-    const idx = compras.findIndex(c => c.id === id);
-    if (idx === -1) return null;
-
-    const compra = compras[idx];
-    EstoqueModel.saida(compra.produtoId, compra.quantidade);
-    compras.splice(idx, 1);
+async function remover(id) {
+    const compra = await Compra.findByPk(id);
+    if (!compra) return null;
+    await EstoqueModel.saida(compra.produtoId, compra.quantidade);
+    await compra.destroy();
     return compra;
 }
 
-module.exports = { listarTodos, buscarPorId, criar, remover };
+module.exports = { Compra, listarTodos, buscarPorId, criar, remover };

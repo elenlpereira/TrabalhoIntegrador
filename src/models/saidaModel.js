@@ -1,9 +1,27 @@
+const sequelize = require('../../config/localConnection');
+const { DataTypes, Op } = require('sequelize');
 const EstoqueModel = require('./estoqueModel');
 
 const TIPOS_SAIDA_MANUAL = ['devolucao', 'quebra', 'vencimento', 'erro_operacional'];
 
-let saidas = [];
-let proximoId = 1;
+// ── Schema ──
+
+const TODOS_TIPOS_SAIDA = [...TIPOS_SAIDA_MANUAL, 'venda', 'estorno_venda'];
+
+const Saida = sequelize.define('Saida', {
+    id:          { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    produtoId:   { type: DataTypes.INTEGER },
+    nomeProduto: { type: DataTypes.STRING, allowNull: false },
+    quantidade:  { type: DataTypes.INTEGER, allowNull: false },
+    tipoSaida:   { type: DataTypes.ENUM(...TODOS_TIPOS_SAIDA), allowNull: false },
+    descricao:   { type: DataTypes.STRING, allowNull: false },
+    data:        { type: DataTypes.DATEONLY, allowNull: false },
+    origem:      { type: DataTypes.STRING, allowNull: false },
+}, {
+    tableName: 'saida',
+    freezeTableName: true,
+    timestamps: false,
+});
 
 // ── Validações ────────────────────────────────────────────────────────────────
 
@@ -33,42 +51,33 @@ function validarSaidaManual(dados) {
 
 // ── Funções internas ──────────────────────────────────────────────────────────
 
-function registrar(produtoId, quantidade, tipoSaida, descricao, data, origem) {
-    const produtoAtualizado = EstoqueModel.saida(Number(produtoId), Number(quantidade));
-
-    const novaSaida = {
-        id: proximoId++,
-        produtoId: Number(produtoId),
+async function registrar(produtoId, quantidade, tipoSaida, descricao, data, origem) {
+    const produtoAtualizado = await EstoqueModel.saida(Number(produtoId), Number(quantidade));
+    return Saida.create({
+        produtoId:   Number(produtoId),
         nomeProduto: produtoAtualizado.nome,
-        quantidade: Number(quantidade),
+        quantidade:  Number(quantidade),
         tipoSaida,
         descricao,
         data,
         origem,
-    };
-
-    saidas.push(novaSaida);
-    return novaSaida;
+    });
 }
 
 // ── Funções públicas ──────────────────────────────────────────────────────────
 
-function listarTodos(filtros = {}) {
-    let resultado = [...saidas];
-    if (filtros.tipoSaida) {
-        resultado = resultado.filter(s => s.tipoSaida === filtros.tipoSaida);
-    }
-    if (filtros.origem) {
-        resultado = resultado.filter(s => s.origem === filtros.origem);
-    }
-    return resultado;
+async function listarTodos(filtros = {}) {
+    const where = {};
+    if (filtros.tipoSaida) where.tipoSaida = filtros.tipoSaida;
+    if (filtros.origem)    where.origem    = filtros.origem;
+    return Saida.findAll({ where, order: [['id', 'ASC']] });
 }
 
-function buscarPorId(id) {
-    return saidas.find(s => s.id === id) || null;
+async function buscarPorId(id) {
+    return Saida.findByPk(id);
 }
 
-function criarManual(dados) {
+async function criarManual(dados) {
     validarSaidaManual(dados);
     return registrar(
         dados.produtoId,
@@ -80,8 +89,8 @@ function criarManual(dados) {
     );
 }
 
-// TODO: chamado pelo model de comanda ao adicionar item ao pedido
-function registrarSaidaVenda(produtoId, quantidade) {
+// Chamado pelo model de comanda ao fechar pedido
+async function registrarSaidaVenda(produtoId, quantidade) {
     return registrar(
         produtoId,
         quantidade,
@@ -92,40 +101,34 @@ function registrarSaidaVenda(produtoId, quantidade) {
     );
 }
 
-// TODO: chamado pelo model de comanda ao editar ou remover item do pedido
-function estornarSaidaVenda(produtoId, quantidade) {
-    EstoqueModel.entrada(Number(produtoId), Number(quantidade));
-
-    const estorno = {
-        id: proximoId++,
-        produtoId: Number(produtoId),
-        quantidade: Number(quantidade),
-        tipoSaida: 'estorno_venda',
-        descricao: 'Estorno automático por edição ou remoção de item na comanda',
-        data: new Date().toISOString().split('T')[0],
-        origem: 'estorno_venda',
-    };
-
-    saidas.push(estorno);
-    return estorno;
+// Chamado pelo model de comanda ao editar ou remover item
+async function estornarSaidaVenda(produtoId, quantidade) {
+    await EstoqueModel.entrada(Number(produtoId), Number(quantidade));
+    const produto = await require('./produtoModel').buscarPorId(Number(produtoId));
+    return Saida.create({
+        produtoId:   Number(produtoId),
+        nomeProduto: produto.nome,
+        quantidade:  Number(quantidade),
+        tipoSaida:   'estorno_venda',
+        descricao:   'Estorno automático por edição ou remoção de item na comanda',
+        data:        new Date().toISOString().split('T')[0],
+        origem:      'estorno_venda',
+    });
 }
 
-function remover(id) {
-    const idx = saidas.findIndex(s => s.id === id);
-    if (idx === -1) return null;
-
-    const saida = saidas[idx];
-
+async function remover(id) {
+    const saida = await Saida.findByPk(id);
+    if (!saida) return null;
     if (saida.origem === 'venda') {
         throw new Error('Saídas por venda não podem ser removidas manualmente. Use o estorno via comanda');
     }
-
-    EstoqueModel.entrada(saida.produtoId, saida.quantidade);
-    saidas.splice(idx, 1);
+    await EstoqueModel.entrada(saida.produtoId, saida.quantidade);
+    await saida.destroy();
     return saida;
 }
 
 module.exports = {
+    Saida,
     listarTodos,
     buscarPorId,
     criarManual,

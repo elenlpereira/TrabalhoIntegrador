@@ -1,4 +1,8 @@
 const express = require('express');
+// Garante que todos os models Sequelize e suas associações são carregados
+// antes de qualquer requisição chegar
+require('./models/index');
+
 const usuarioRoutes  = require('./routes/usuarioRoutes');
 const produtoRoutes  = require('./routes/produtoRoutes');
 const compraRoutes   = require('./routes/compraRoutes');

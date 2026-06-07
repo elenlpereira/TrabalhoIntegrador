@@ -1,41 +1,76 @@
-const ClienteModel = require('./clienteModel');
-const ProdutoModel = require('./produtoModel');
-const SaidaModel   = require('./saidaModel');
+const sequelize = require('../../config/localConnection');
+const { DataTypes, Op } = require('sequelize');
+const ClienteModel  = require('./clienteModel');
+const ProdutoModel  = require('./produtoModel');
+const SaidaModel    = require('./saidaModel');
 const { CONSUMIDOR_FINAL_ID } = require('./clienteModel');
 
-let comandas  = [];
-let proximoId = 1;
+const STATUS = { ABERTA: 'aberta', FECHADA: 'fechada', CANCELADA: 'cancelada' };
 
-const STATUS = { ABERTA: 'aberta', FECHADA: 'fechada' };
+// ── Schema ──
+
+const Comanda = sequelize.define('Comanda', {
+    id:          { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    status:      { type: DataTypes.ENUM(...Object.values(STATUS)), allowNull: false, defaultValue: STATUS.ABERTA },
+    infoCliente: { type: DataTypes.STRING },
+    clienteId:   { type: DataTypes.INTEGER, allowNull: false, defaultValue: CONSUMIDOR_FINAL_ID },
+    total:       { type: DataTypes.DECIMAL(10, 2), allowNull: false, defaultValue: 0 },
+}, {
+    tableName: 'comanda',
+    freezeTableName: true,
+    timestamps: false,
+});
+
+const ComandaItem = sequelize.define('ComandaItem', {
+    id:            { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    comandaId:     { type: DataTypes.INTEGER, allowNull: false },
+    produtoId:     { type: DataTypes.INTEGER, allowNull: false },
+    nomeProduto:   { type: DataTypes.STRING, allowNull: false },
+    precoUnitario: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    quantidade:    { type: DataTypes.INTEGER, allowNull: false },
+    subtotal:      { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+}, {
+    tableName: 'comanda_item',
+    freezeTableName: true,
+    timestamps: false,
+});
+
+// Associações locais
+Comanda.hasMany(ComandaItem, { foreignKey: 'comandaId', as: 'itens' });
+ComandaItem.belongsTo(Comanda, { foreignKey: 'comandaId' });
 
 
-function quantidadeReservada(produtoId, ignorarComandaId = null) {
-    return comandas
-        .filter(c => c.status === STATUS.ABERTA && c.id !== ignorarComandaId)
-        .reduce((soma, c) => {
-            const item = c.itens.find(i => i.produtoId === produtoId);
-            return soma + (item ? item.quantidade : 0);
-        }, 0);
+async function quantidadeReservada(produtoId, ignorarComandaId = null) {
+    const where = { status: STATUS.ABERTA };
+    if (ignorarComandaId) where.id = { [Op.ne]: ignorarComandaId };
+    const abertas = await Comanda.findAll({ attributes: ['id'], where });
+    const ids = abertas.map(c => c.id);
+    if (ids.length === 0) return 0;
+    const result = await ComandaItem.findAll({
+        attributes: [[sequelize.fn('SUM', sequelize.col('quantidade')), 'total']],
+        where: { produtoId, comandaId: { [Op.in]: ids } },
+        raw: true,
+    });
+    return Number(result[0]?.total || 0);
 }
 
-
-function estoqueDisponivel(produtoId, ignorarComandaId = null) {
-    const produto  = ProdutoModel.buscarPorId(produtoId);
+async function estoqueDisponivel(produtoId, ignorarComandaId = null) {
+    const produto = await ProdutoModel.buscarPorId(produtoId);
     if (!produto) throw new Error(`Produto com id ${produtoId} não encontrado`);
-    const reservado = quantidadeReservada(produtoId, ignorarComandaId);
+    const reservado = await quantidadeReservada(produtoId, ignorarComandaId);
     return produto.quantidadeEstoque - reservado;
 }
 
 // ── Validações ────────────────────────────────────────────────────────────────
 
-function validarClienteExiste(clienteId) {
-    const cliente = ClienteModel.buscarPorId(clienteId);
+async function validarClienteExiste(clienteId) {
+    const cliente = await ClienteModel.buscarPorId(clienteId);
     if (!cliente) throw new Error(`Cliente com id ${clienteId} não encontrado`);
     return cliente;
 }
 
-function validarProdutoExiste(produtoId) {
-    const produto = ProdutoModel.buscarPorId(produtoId);
+async function validarProdutoExiste(produtoId) {
+    const produto = await ProdutoModel.buscarPorId(produtoId);
     if (!produto) throw new Error(`Produto com id ${produtoId} não encontrado`);
     return produto;
 }
@@ -49,85 +84,79 @@ function validarQuantidade(quantidade) {
 }
 
 function validarComandaAberta(comanda) {
-    if (comanda.status === STATUS.FECHADA) {
-        throw new Error('Não é possível alterar uma comanda fechada');
+    if (comanda.status === STATUS.FECHADA || comanda.status === STATUS.CANCELADA) {
+        throw new Error('Não é possível alterar uma comanda fechada ou cancelada');
     }
 }
 
 // ── Cálculo do total ──────────────────────────────────────────────────────────
 
 function calcularTotal(itens) {
-    return itens.reduce((soma, item) => soma + item.subtotal, 0);
+    return itens.reduce((soma, item) => soma + Number(item.subtotal), 0);
+}
+
+// helper interno
+async function _buscarComandaComItens(id) {
+    return Comanda.findByPk(id, { include: [{ model: ComandaItem, as: 'itens' }] });
 }
 
 // ── Funções de dados ──────────────────────────────────────────────────────────
 
-function listarTodos(filtros = {}) {
-    let resultado = [...comandas];
-    if (filtros.status) {
-        resultado = resultado.filter(c => c.status === filtros.status);
-    }
-    return resultado;
+async function listarTodos(filtros = {}) {
+    const where = {};
+    if (filtros.status) where.status = filtros.status;
+    return Comanda.findAll({ where, include: [{ model: ComandaItem, as: 'itens' }], order: [['id', 'ASC']] });
 }
 
-function buscarPorId(id) {
-    return comandas.find(c => c.id === id) || null;
+async function buscarPorId(id) {
+    return _buscarComandaComItens(id);
 }
 
 // Abre uma nova comanda — clienteId e infoCliente são opcionais
 // Se clienteId não for informado, usa Consumidor Final automaticamente
-function criar(dados = {}) {
+async function criar(dados = {}) {
     const clienteId = dados.clienteId ? Number(dados.clienteId) : CONSUMIDOR_FINAL_ID;
-    validarClienteExiste(clienteId);
- 
-    const novaComanda = {
-        id:          proximoId++,
+    await validarClienteExiste(clienteId);
+    const novaComanda = await Comanda.create({
         status:      STATUS.ABERTA,
         infoCliente: dados.infoCliente || null,
         clienteId,
-        itens:       [],
         total:       0,
-    };
-
-    comandas.push(novaComanda);
-    return novaComanda;
+    });
+    return _buscarComandaComItens(novaComanda.id);
 }
 
 // Atualiza infoCliente e/ou clienteId enquanto a comanda estiver aberta
-function atualizarCabecalho(id, dados) {
-    const comanda = buscarPorId(id);
+async function atualizarCabecalho(id, dados) {
+    const comanda = await _buscarComandaComItens(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
 
-    if (dados.infoCliente !== undefined) {
-        comanda.infoCliente = dados.infoCliente || null;
-    }
-
+    const updates = {};
+    if (dados.infoCliente !== undefined) updates.infoCliente = dados.infoCliente || null;
     if (dados.clienteId !== undefined) {
         const clienteId = dados.clienteId ? Number(dados.clienteId) : CONSUMIDOR_FINAL_ID;
-        validarClienteExiste(clienteId);
-        comanda.clienteId = clienteId;
+        await validarClienteExiste(clienteId);
+        updates.clienteId = clienteId;
     }
-
+    await comanda.update(updates);
     return comanda;
 }
 
 // Adiciona um item ou incrementa a quantidade se o produto já estiver na comanda.
 // Valida disponibilidade considerando o que outras comandas abertas já reservaram.
-function adicionarItem(id, dados) {
-    const comanda = buscarPorId(id);
+async function adicionarItem(id, dados) {
+    const comanda = await _buscarComandaComItens(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
 
-    const produto = validarProdutoExiste(Number(dados.produtoId));
+    const produto = await validarProdutoExiste(Number(dados.produtoId));
     const qtdAdd  = validarQuantidade(dados.quantidade);
 
-    // Quanto já está reservado nesta própria comanda para este produto
     const itemExistente = comanda.itens.find(i => i.produtoId === produto.id);
     const qtdNaComanda  = itemExistente ? itemExistente.quantidade : 0;
 
-    // Disponível = estoque físico − reservado em OUTRAS comandas abertas
-    const disponivel = estoqueDisponivel(produto.id, id);
+    const disponivel = await estoqueDisponivel(produto.id, id);
 
     if (qtdNaComanda + qtdAdd > disponivel) {
         throw new Error(
@@ -136,25 +165,31 @@ function adicionarItem(id, dados) {
     }
 
     if (itemExistente) {
-        itemExistente.quantidade += qtdAdd;
-        itemExistente.subtotal    = itemExistente.quantidade * itemExistente.precoUnitario;
+        const novaQtd = itemExistente.quantidade + qtdAdd;
+        await itemExistente.update({
+            quantidade: novaQtd,
+            subtotal:   novaQtd * Number(itemExistente.precoUnitario),
+        });
     } else {
-        comanda.itens.push({
+        await ComandaItem.create({
+            comandaId:     comanda.id,
             produtoId:     produto.id,
             nomeProduto:   produto.nome,
-            precoUnitario: produto.precoVenda,
+            precoUnitario: Number(produto.precoVenda),
             quantidade:    qtdAdd,
-            subtotal:      qtdAdd * produto.precoVenda,
+            subtotal:      qtdAdd * Number(produto.precoVenda),
         });
     }
 
-    comanda.total = calcularTotal(comanda.itens);
-    return comanda;
+    // Recalcula total
+    const atualizada = await _buscarComandaComItens(id);
+    await atualizada.update({ total: calcularTotal(atualizada.itens) });
+    return _buscarComandaComItens(id);
 }
 
 // Altera a quantidade de um item (envia a quantidade NOVA desejada).
-function atualizarItem(id, produtoId, dados) {
-    const comanda = buscarPorId(id);
+async function atualizarItem(id, produtoId, dados) {
+    const comanda = await _buscarComandaComItens(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
 
@@ -163,9 +198,7 @@ function atualizarItem(id, produtoId, dados) {
     if (!item) throw new Error(`Produto com id ${pId} não encontrado na comanda`);
 
     const novaQtd = validarQuantidade(dados.quantidade);
-
-    // Disponível = estoque físico − reservado em outras comandas (ignora esta)
-    const disponivel = estoqueDisponivel(pId, id);
+    const disponivel = await estoqueDisponivel(pId, id);
 
     if (novaQtd > disponivel) {
         throw new Error(
@@ -173,55 +206,57 @@ function atualizarItem(id, produtoId, dados) {
         );
     }
 
-    item.quantidade = novaQtd;
-    item.subtotal   = novaQtd * item.precoUnitario;
-    comanda.total   = calcularTotal(comanda.itens);
-    return comanda;
+    await item.update({
+        quantidade: novaQtd,
+        subtotal:   novaQtd * Number(item.precoUnitario),
+    });
+
+    const atualizada = await _buscarComandaComItens(id);
+    await atualizada.update({ total: calcularTotal(atualizada.itens) });
+    return _buscarComandaComItens(id);
 }
 
 // Remove um item da comanda — sem movimentar estoque (ainda não foi baixado)
-function removerItem(id, produtoId) {
-    const comanda = buscarPorId(id);
+async function removerItem(id, produtoId) {
+    const comanda = await _buscarComandaComItens(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
 
     const pId = Number(produtoId);
-    const idx = comanda.itens.findIndex(i => i.produtoId === pId);
-    if (idx === -1) throw new Error(`Produto com id ${pId} não encontrado na comanda`);
+    const item = comanda.itens.find(i => i.produtoId === pId);
+    if (!item) throw new Error(`Produto com id ${pId} não encontrado na comanda`);
 
-    comanda.itens.splice(idx, 1);
-    comanda.total = calcularTotal(comanda.itens);
-    return comanda;
+    await item.destroy();
+    const atualizada = await _buscarComandaComItens(id);
+    await atualizada.update({ total: calcularTotal(atualizada.itens) });
+    return _buscarComandaComItens(id);
 }
 
-// Fecha a comanda: exige cliente e só então baixa o estoque de todos os itens
-function fechar(id) {
-    const comanda = buscarPorId(id);
+// Fecha a comanda: só então baixa o estoque de todos os itens
+async function fechar(id) {
+    const comanda = await _buscarComandaComItens(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
 
     if (comanda.itens.length === 0) {
         throw new Error('Não é possível fechar uma comanda sem itens');
     }
- 
+
     for (const item of comanda.itens) {
-        SaidaModel.registrarSaidaVenda(item.produtoId, item.quantidade);
+        await SaidaModel.registrarSaidaVenda(item.produtoId, item.quantidade);
     }
- 
-    comanda.status    = STATUS.FECHADA;
-    comanda.fechadoEm = new Date().toISOString();
+
+    await comanda.update({ status: STATUS.FECHADA });
     return comanda;
 }
 
-// Cancela a comanda: remove o registro sem mexer no estoque (nada foi baixado)
-function cancelar(id) {
-    const comanda = buscarPorId(id);
+// Cancela a comanda sem movimentar estoque (nada foi baixado)
+async function cancelar(id) {
+    const comanda = await _buscarComandaComItens(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
-
-    const idx = comandas.findIndex(c => c.id === id);
-    comandas.splice(idx, 1);
+    await comanda.update({ status: STATUS.CANCELADA });
     return comanda;
 }
 
-module.exports = {listarTodos, buscarPorId, criar, atualizarCabecalho, adicionarItem, atualizarItem, removerItem, fechar, cancelar, STATUS};
+module.exports = { Comanda, ComandaItem, listarTodos, buscarPorId, criar, atualizarCabecalho, adicionarItem, atualizarItem, removerItem, fechar, cancelar, STATUS };

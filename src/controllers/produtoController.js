@@ -5,33 +5,33 @@ const ProdutoModel = require('../models/produtoModel');
 const RESP_HTTP = require('../../consts');
 const helper = require('./helpers');
 
-function listar(req, res) {
-    const produtos = ProdutoModel.listarTodos(req.query);
+async function listar(req, res) {
+    const produtos = await ProdutoModel.listarTodos(req.query);
     res.status(RESP_HTTP.OK).json({ total: produtos.length, produtos });
 }
 
-function buscar(req, res) {
+async function buscar(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
-    const produto = ProdutoModel.buscarPorId(id);
+    const produto = await ProdutoModel.buscarPorId(id);
     if (!produto) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Produto não encontrado' });
     res.status(RESP_HTTP.OK).json(produto);
 }
 
-function criar(req, res) {
+async function criar(req, res) {
     try {
-        const novoProduto = ProdutoModel.criar(req.body);
+        const novoProduto = await ProdutoModel.criar(req.body);
         res.status(RESP_HTTP.CREATED).set('Location', '/api/produtos/' + novoProduto.id).json(novoProduto);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
     }
 }
 
-function atualizar(req, res) {
+async function atualizar(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
     try {
-        const produto = ProdutoModel.atualizar(id, req.body);
+        const produto = await ProdutoModel.atualizar(id, req.body);
         if (!produto) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Produto não encontrado' });
         res.status(RESP_HTTP.OK).json(produto);
     } catch (err) {
@@ -39,11 +39,11 @@ function atualizar(req, res) {
     }
 }
 
-function atualizarParcial(req, res) {
+async function atualizarParcial(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
     try {
-        const produto = ProdutoModel.atualizarParcial(id, req.body);
+        const produto = await ProdutoModel.atualizarParcial(id, req.body);
         if (!produto) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Produto não encontrado' });
         res.status(RESP_HTTP.OK).json(produto);
     } catch (err) {
@@ -51,12 +51,16 @@ function atualizarParcial(req, res) {
     }
 }
 
-function remover(req, res) {
+async function remover(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
-    const ok = ProdutoModel.remover(id);
-    if (!ok) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Produto não encontrado' });
-    res.status(RESP_HTTP.NO_CONTENT).send();
+    try {
+        const ok = await ProdutoModel.remover(id);
+        if (!ok) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Produto não encontrado' });
+        res.status(RESP_HTTP.NO_CONTENT).send();
+    } catch (err) {
+        res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
+    }
 }
 
 module.exports = { listar, buscar, criar, atualizar, atualizarParcial, remover };
