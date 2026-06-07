@@ -1,11 +1,5 @@
 const EstoqueModel = require('./estoqueModel');
-
-// TODO: substituir por vínculo ao CRUD de fornecedores quando implementado
-const fornecedores = [
-    { id: 1, nome: 'Distribuidora Alpha' },
-    { id: 2, nome: 'Atacado Beta' },
-    { id: 3, nome: 'Fornecedor Gama' },
-];
+const FornecedorModel = require('./fornecedor.Model');
 
 let compras = [];
 let proximoId = 1;
@@ -21,10 +15,9 @@ function validarCamposObrigatorios(dados) {
 }
 
 function validarFornecedor(fornecedorId) {
-    // TODO: validar com CRUD de fornecedores quando implementado
-    const existe = fornecedores.find(f => f.id === Number(fornecedorId));
-    if (!existe) throw new Error(`Fornecedor com id ${fornecedorId} não encontrado`);
-    return existe;
+    const fornecedor = FornecedorModel.buscarPorId(Number(fornecedorId));
+    if (!fornecedor) throw new Error(`Fornecedor com id ${fornecedorId} não encontrado`);
+    return fornecedor;
 }
 
 function validarData(data) {
@@ -61,7 +54,7 @@ function criar(dados) {
         nomeProduto: produtoAtualizado.nome,
         quantidade,
         fornecedorId: Number(dados.fornecedorId),
-        nomeFornecedor: fornecedor.nome,
+        nomeFornecedor: fornecedor.razaoSocial,
         custoUnitario: Number(dados.custoUnitario),
         totalCusto: quantidade * Number(dados.custoUnitario),
         numeroNotaFiscal: dados.numeroNotaFiscal || null,
@@ -82,9 +75,4 @@ function remover(id) {
     return compra;
 }
 
-function listarFornecedores() {
-    // TODO: substituir por chamada ao CRUD de fornecedores quando implementado
-    return fornecedores;
-}
-
-module.exports = { listarTodos, buscarPorId, criar, remover, listarFornecedores };
+module.exports = { listarTodos, buscarPorId, criar, remover };

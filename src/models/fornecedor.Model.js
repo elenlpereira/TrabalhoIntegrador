@@ -11,12 +11,16 @@ let fornecedores = [
 ];
 let proximoId = 2;
  
-const CATEGORIAS_VALIDAS = ['bebidas', 'doces', 'salgados', 'não perecíveis', 'laticinios', 'limpeza', 'outros'];
+const CATEGORIAS_VALIDAS = ['bebidas', 'alimentos', 'mercearia', 'outros'];
  
 // ── Validações ────────────────────────────────────────────────────────────────
  
 function normalizarCnpj(cnpj) {
     return cnpj.replace(/[.\-\/]/g, '');
+}
+
+function normalizarCategoria(categoria) {
+    return String(categoria || '').trim().toLowerCase();
 }
  
 function validarFormatoCnpj(cnpj) {
@@ -36,7 +40,8 @@ function validarCamposObrigatorios(dados) {
 }
  
 function validarCategoria(categoria) {
-    if (!CATEGORIAS_VALIDAS.includes(categoria.toLowerCase())) {
+    const categoriaNormalizada = normalizarCategoria(categoria);
+    if (!CATEGORIAS_VALIDAS.includes(categoriaNormalizada)) {
         throw new Error(`Categoria inválida. Valores aceitos: ${CATEGORIAS_VALIDAS.join(', ')}`);
     }
 }
@@ -95,7 +100,7 @@ function criar(dados) {
         telefone: dados.telefone,
         email: dados.email,
         cidade: dados.cidade,
-        categoriaProduto: dados.categoriaProduto.toLowerCase(),
+        categoriaProduto: normalizarCategoria(dados.categoriaProduto),
     };
     fornecedores.push(novoFornecedor);
     return novoFornecedor;
@@ -113,7 +118,7 @@ function atualizar(id, dados) {
         telefone: dados.telefone,
         email: dados.email,
         cidade: dados.cidade,
-        categoriaProduto: dados.categoriaProduto.toLowerCase(),
+        categoriaProduto: normalizarCategoria(dados.categoriaProduto),
     };
     return fornecedores[idx];
 }
@@ -134,7 +139,7 @@ function atualizarParcial(id, dados) {
     }
     if (dados.categoriaProduto) {
         validarCategoria(dados.categoriaProduto);
-        dados = { ...dados, categoriaProduto: dados.categoriaProduto.toLowerCase() };
+        dados = { ...dados, categoriaProduto: normalizarCategoria(dados.categoriaProduto) };
     }
  
     fornecedores[idx] = { ...fornecedores[idx], ...dados, id };
