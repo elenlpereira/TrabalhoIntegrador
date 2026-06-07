@@ -6,6 +6,7 @@ const saidaRoutes    = require('./routes/saidaRoutes');
 const clienteRoutes  = require('./routes/clienteRoutes');
 const fornecedorRoutes = require('./routes/fornecedorRoutes');
 const comandaRoutes  = require('./routes/comandaRoutes');
+const pagamentoRoutes  = require('./routes/pagamentoRoutes');
 
 const app = express();
 app.use(express.json());
@@ -17,5 +18,6 @@ app.use('/api/saidas',      saidaRoutes);
 app.use('/api/clientes',    clienteRoutes);
 app.use('/api/fornecedores', fornecedorRoutes);
 app.use('/api/comandas',    comandaRoutes);
+app.use('/api/pagamentos',  pagamentoRoutes);
 
 module.exports = app;

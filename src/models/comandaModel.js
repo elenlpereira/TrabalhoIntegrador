@@ -1,7 +1,8 @@
 const ClienteModel = require('./clienteModel');
 const ProdutoModel = require('./produtoModel');
-const SaidaModel   = require('./saidaModel');
+const SaidaModel = require('./saidaModel');
 const { CONSUMIDOR_FINAL_ID } = require('./clienteModel');
+const PagamentoModel = require('./pagamentoModel');
 
 let comandas  = [];
 let proximoId = 1;
@@ -194,7 +195,7 @@ function removerItem(id, produtoId) {
     return comanda;
 }
 
-// Fecha a comanda: exige cliente e só então baixa o estoque de todos os itens
+// Fecha a comanda: registra as saídas no estoque e marca a comanda como fechada.
 function fechar(id) {
     const comanda = buscarPorId(id);
     if (!comanda) return null;
@@ -210,7 +211,12 @@ function fechar(id) {
  
     comanda.status    = STATUS.FECHADA;
     comanda.fechadoEm = new Date().toISOString();
-    return comanda;
+   
+     // Gera o registro de pagamento pendente
+    const pagamento = PagamentoModel.criar(comanda.id, comanda.clienteId, comanda.total);
+    comanda.pagamentoId = pagamento.id;
+ 
+    return { comanda, pagamento };
 }
 
 // Cancela a comanda: remove o registro sem mexer no estoque (nada foi baixado)
