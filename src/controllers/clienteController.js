@@ -66,9 +66,13 @@ function atualizarParcial(req, res) {
 function remover(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
-    const ok = CLienteModel.remover(id);
-    if (!ok) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Cliente não encontrado' });
-    res.status(RESP_HTTP.NO_CONTENT).send();
+    try {
+        const ok = CLienteModel.remover(id);
+        if (!ok) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Cliente não encontrado' });
+        res.status(RESP_HTTP.NO_CONTENT).send();
+    } catch (err) {
+        res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
+    }
 }
 
 

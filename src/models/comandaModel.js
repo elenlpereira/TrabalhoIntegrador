@@ -1,6 +1,7 @@
 const ClienteModel = require('./clienteModel');
 const ProdutoModel = require('./produtoModel');
 const SaidaModel   = require('./saidaModel');
+const { CONSUMIDOR_FINAL_ID } = require('./clienteModel');
 
 let comandas  = [];
 let proximoId = 1;
@@ -74,19 +75,19 @@ function buscarPorId(id) {
 }
 
 // Abre uma nova comanda — clienteId e infoCliente são opcionais
+// Se clienteId não for informado, usa Consumidor Final automaticamente
 function criar(dados = {}) {
+    const clienteId = dados.clienteId ? Number(dados.clienteId) : CONSUMIDOR_FINAL_ID;
+    validarClienteExiste(clienteId);
+ 
     const novaComanda = {
         id:          proximoId++,
         status:      STATUS.ABERTA,
         infoCliente: dados.infoCliente || null,
-        clienteId:   dados.clienteId ? Number(dados.clienteId) : null,
+        clienteId,
         itens:       [],
         total:       0,
     };
-
-    if (novaComanda.clienteId) {
-        validarClienteExiste(novaComanda.clienteId);
-    }
 
     comandas.push(novaComanda);
     return novaComanda;
@@ -103,12 +104,9 @@ function atualizarCabecalho(id, dados) {
     }
 
     if (dados.clienteId !== undefined) {
-        if (dados.clienteId === null) {
-            comanda.clienteId = null;
-        } else {
-            validarClienteExiste(Number(dados.clienteId));
-            comanda.clienteId = Number(dados.clienteId);
-        }
+        const clienteId = dados.clienteId ? Number(dados.clienteId) : CONSUMIDOR_FINAL_ID;
+        validarClienteExiste(clienteId);
+        comanda.clienteId = clienteId;
     }
 
     return comanda;
@@ -202,16 +200,16 @@ function fechar(id) {
     if (!comanda) return null;
     validarComandaAberta(comanda);
 
-    if (!comanda.clienteId) {
-        throw new Error('A comanda deve ter um cliente vinculado para ser fechada');
+    if (comanda.itens.length === 0) {
+        throw new Error('Não é possível fechar uma comanda sem itens');
     }
-
-    // Baixa estoque de todos os itens de uma vez
+ 
     for (const item of comanda.itens) {
         SaidaModel.registrarSaidaVenda(item.produtoId, item.quantidade);
     }
-
-    comanda.status = STATUS.FECHADA;
+ 
+    comanda.status    = STATUS.FECHADA;
+    comanda.fechadoEm = new Date().toISOString();
     return comanda;
 }
 

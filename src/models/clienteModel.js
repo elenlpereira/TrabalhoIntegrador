@@ -1,8 +1,8 @@
-const bcrypt = require('bcryptjs');
+// id: 1 é reservado para Consumidor Final — não pode ser editado nem removido
+const CONSUMIDOR_FINAL = { id: 1, nome: 'Consumidor Final', cpf: '00000000000', telefone: null, email: null };
+const CONSUMIDOR_FINAL_ID = 1;
  
-let clientes = [
-    { id: 1, nome: 'João Silva', cpf: '12345678900', telefone: '11999999999', email: 'joao.silva@example.com' }
-];
+let clientes = [];
 let proximoId = 2;
  
 // ── Validações ────────────────────────────────────────────────────────────────
@@ -27,6 +27,10 @@ function validarCamposObrigatorios(dados) {
  
 function validarCpfUnico(cpf, idIgnorado = null) {
     const cpfNormalizado = normalizarCpf(cpf);
+     // Protege o CPF do Consumidor Final de ser cadastrado em outro cliente
+    if (cpfNormalizado === CONSUMIDOR_FINAL.cpf && idIgnorado !== CONSUMIDOR_FINAL_ID) {
+        throw new Error('CPF já cadastrado');
+    }
     const existe = clientes.find(c => normalizarCpf(c.cpf) === cpfNormalizado && c.id !== idIgnorado);
     if (existe) throw new Error('CPF já cadastrado');
 }
@@ -48,20 +52,32 @@ function validarCliente(dados, idIgnorado = null) {
     validarCpfUnico(dados.cpf, idIgnorado);
     validarEmailUnico(dados.email, idIgnorado);
 }
+function isConsumidorFinal(id) {
+    return Number(id) === CONSUMIDOR_FINAL_ID;
+}
  
 // ── Funções de dados ──────────────────────────────────────────────────────────
  
 function listarTodos() {
-    return clientes;
+     return [CONSUMIDOR_FINAL, ...clientes];
 }
  
 function buscarPorId(id) {
+    if (isConsumidorFinal(id)) return CONSUMIDOR_FINAL;
     return clientes.find(c => c.id === id) || null;
 }
  
 function buscarPorCPF(cpf) {
     const cpfNormalizado = normalizarCpf(cpf);
+    if (cpfNormalizado === CONSUMIDOR_FINAL.cpf) return CONSUMIDOR_FINAL;
     return clientes.find(c => normalizarCpf(c.cpf) === cpfNormalizado) || null;
+}
+
+function buscarPorNome(nome) {
+    const termo = nome.toLowerCase();
+    const resultadoCF = CONSUMIDOR_FINAL.nome.toLowerCase().includes(termo) ? [CONSUMIDOR_FINAL] : [];
+    const resultadoClientes = clientes.filter(c => c.nome.toLowerCase().includes(termo));
+    return [...resultadoCF, ...resultadoClientes];
 }
  
 function criar(dados) {
@@ -80,6 +96,7 @@ function criar(dados) {
  
 // PUT - exige objeto completo
 function atualizar(id, dados) {
+    if (isConsumidorFinal(id)) throw new Error('Consumidor Final não pode ser editado');
     const idx = clientes.findIndex(c => c.id === id);
     if (idx === -1) return null;
  
@@ -97,6 +114,7 @@ function atualizar(id, dados) {
  
 // PATCH - atualiza parcialmente
 function atualizarParcial(id, dados) {
+    if (isConsumidorFinal(id)) throw new Error('Consumidor Final não pode ser editado');
     const idx = clientes.findIndex(c => c.id === id);
     if (idx === -1) return null;
  
@@ -116,16 +134,11 @@ function atualizarParcial(id, dados) {
 }
  
 function remover(id) {
+    if (isConsumidorFinal(id)) throw new Error('Consumidor Final não pode ser removido');
     const idx = clientes.findIndex(c => c.id === id);
     if (idx === -1) return false;
     clientes.splice(idx, 1);
     return true;
 }
  
-
-function buscarPorNome(nome) {
-    const termo = nome.toLowerCase();
-    return clientes.filter(c => c.nome.toLowerCase().includes(termo));
-}
- 
-module.exports = { listarTodos, buscarPorNome, buscarPorId, buscarPorCPF, criar, atualizar, atualizarParcial, remover};
+module.exports = { listarTodos, buscarPorNome, buscarPorId, buscarPorCPF, criar, atualizar, atualizarParcial, remover, CONSUMIDOR_FINAL_ID};
