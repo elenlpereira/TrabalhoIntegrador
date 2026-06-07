@@ -90,9 +90,13 @@ async function fechar(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
     try {
-        const comanda = await ComandaModel.fechar(id);
-        if (!comanda) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Comanda não encontrada' });
-        res.status(RESP_HTTP.OK).json(comanda);
+        const resultado = ComandaModel.fechar(id);
+        if (!resultado) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Comanda não encontrada' });
+        res.status(RESP_HTTP.OK).json({
+            mensagem:  'Comanda fechada. Prossiga para o pagamento.',
+            comanda:   resultado.comanda,
+            pagamento: resultado.pagamento,
+    });
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
     }
