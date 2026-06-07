@@ -1,17 +1,9 @@
-const ClienteModel = require('./clienteModel');
-
 const FORMAS_QUITACAO  = ['dinheiro', 'pix', 'debito', 'credito'];
 const STATUS = { ABERTA: 'aberta', QUITADA: 'quitada' };
 
 let fichas = [];
 
 // ── Validações ────────────────────────────────────────────────────────────────
-
-function validarClienteExiste(clienteId) {
-    const cliente = ClienteModel.buscarPorId(clienteId);
-    if (!cliente) throw new Error(`Cliente com id ${clienteId} não encontrado`);
-    return cliente;
-}
 
 function arredondar(valor) {
     return Math.round(valor * 100) / 100;
@@ -22,10 +14,8 @@ function arredondar(valor) {
 function buscarOuCriarFicha(clienteId) {
     let ficha = fichas.find(f => f.clienteId === clienteId);
     if (!ficha) {
-        const cliente = validarClienteExiste(clienteId);
         ficha = {
             clienteId,
-            nomeCliente:  cliente.nome,
             status:       STATUS.ABERTA,
             saldoDevedor: 0,
             debitos:      [],

@@ -234,8 +234,8 @@ async function removerItem(id, produtoId) {
 }
 
 // Fecha a comanda: registra as saídas no estoque e marca a comanda como fechada.
-function fechar(id) {
-    const comanda = buscarPorId(id);
+async function fechar(id) {
+    const comanda = await _buscarComandaComItens(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
 
@@ -246,14 +246,12 @@ function fechar(id) {
     for (const item of comanda.itens) {
         await SaidaModel.registrarSaidaVenda(item.produtoId, item.quantidade);
     }
- 
-    comanda.status    = STATUS.FECHADA;
-    comanda.fechadoEm = new Date().toISOString();
-   
-     // Gera o registro de pagamento pendente
+
+    await comanda.update({ status: STATUS.FECHADA });
+
+    // Gera o registro de pagamento pendente (in-memory)
     const pagamento = PagamentoModel.criar(comanda.id, comanda.clienteId, comanda.total);
-    comanda.pagamentoId = pagamento.id;
- 
+
     return { comanda, pagamento };
 }
 
