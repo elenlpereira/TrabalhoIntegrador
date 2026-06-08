@@ -3,7 +3,7 @@
 
 const { Cliente }        = require('./clienteModel');
 const { Usuario }        = require('./usuarioModel');
-const { Fornecedor }     = require('./fornecedor.Model');
+const { Fornecedor }     = require('./fornecedorModel');
 const { Produto }        = require('./produtoModel');
 const { Compra }         = require('./compraModel');
 const { Saida }          = require('./saidaModel');

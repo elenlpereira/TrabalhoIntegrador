@@ -1,4 +1,4 @@
-const FornecedorModel = require('../models/fornecedor.Model');
+const FornecedorModel = require('../models/fornecedorModel');
 const RESP_HTTP = require('../../consts');
 const helper = require('./helpers');
  

@@ -35,7 +35,7 @@ function validarCamposObrigatorios(dados) {
 }
 
 async function validarFornecedorExiste(fornecedorId) {
-    const FornecedorModel = require('./fornecedor.Model');
+    const FornecedorModel = require('./fornecedorModel');
     const fornecedor = await FornecedorModel.buscarPorId(Number(fornecedorId));
     if (!fornecedor) throw new Error(`Fornecedor com id ${fornecedorId} não encontrado`);
 }
