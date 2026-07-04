@@ -1,9 +1,7 @@
 const sequelize = require('../../config/localConnection');
 const { DataTypes } = require('sequelize');
-const EstoqueModel    = require('./estoqueModel');
+const EstoqueModel = require('./estoqueModel');
 const FornecedorModel = require('./fornecedorModel');
-const ProdutoModel    = require('./produtoModel');
-const LogModel        = require('./logModel');
 
 // ── Schema ──
 

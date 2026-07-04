@@ -1,6 +1,7 @@
 const CompraModel = require('../models/compraModel');
-const RESP_HTTP   = require('../../consts');
-const helper      = require('./helpers');
+const FornecedorModel = require('../models/fornecedorModel');
+const RESP_HTTP = require('../../consts');
+const helper = require('./helpers');
 
 async function listar(req, res) {
     const compras = await CompraModel.listarTodos();

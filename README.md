@@ -33,6 +33,30 @@ Sistema de gerenciamento de bar para controle operacional e financeiro.
 - Uma comanda não pode ser fechada sem itens. Após fechada ou cancelada, não pode ser alterada.
 - A quantidade disponível de um produto considera o estoque físico menos o total reservado em todas as **outras** comandas abertas.
 
+## Perfis e permissões (a serem aplicadas)
+ 
+O sistema possui dois perfis de acesso: **Atendente** e **Gerente**.
+ 
+#### Atendente
+ 
+- Consultar e gerenciar clientes
+- Abrir, editar e cancelar comandas
+- Adicionar, editar e remover itens de uma comanda
+- Fechar comandas
+- Registrar pagamentos
+- Consultar fichas
+#### Gerente
+ 
+Possui todas as permissões do Atendente, além de:
+ 
+- Gerenciar usuários (criar, editar, remover)
+- Gerenciar fornecedores
+- Gerenciar produtos (criar, editar, remover)
+- Registrar e estornar compras
+- Registrar saídas manuais de estoque
+- Quitar fichas de clientes
+
+
 ## Stack: 
 - **Sequelize**: ORM para mapeamento objeto-relacional e execução de queries.
 - **PostgreSQL**: banco de dados relacional.
@@ -139,4 +163,6 @@ O servidor sobe em `http://localhost:3000` (ou na porta definida em `PORT`).
 | `/api/compras`        | Compras      |
 | `/api/saidas`         | Saídas       |
 | `/api/comandas`       | Comandas     |
+| `/api/pagamentos`     | Pagamentos   |
+| `/api/ficha`          | Fichas       |
 
