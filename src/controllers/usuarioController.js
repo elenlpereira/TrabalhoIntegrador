@@ -18,7 +18,7 @@ async function buscar(req, res) {
 async function criar(req, res) {
     try {
         const novoUsuario = await UsuarioModel.criar(req.body);
-        res.status(RESP_HTTP.CREATED).set('Location', '/api/usuarios/' + novoUsuario.id).json(novoUsuario);
+        res.status(RESP_HTTP.CREATED).set('Location', '/api/usuarios/' + novoUsuario.id_usuario).json(novoUsuario);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
     }

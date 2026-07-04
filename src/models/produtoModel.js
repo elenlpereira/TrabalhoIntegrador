@@ -3,60 +3,53 @@ const { DataTypes, Op } = require('sequelize');
 
 const CATEGORIAS_VALIDAS = ['bebidas', 'alimentos', 'mercearia', 'outros'];
 
-// ── Schema ────────────────────────────────────────────────────────────────────
+// ── Schema ──
 
 const Produto = sequelize.define('Produto', {
-    id:                { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    nome:              { type: DataTypes.STRING, allowNull: false, unique: true },
-    quantidadeEstoque: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
-    estoqueMinimo:     { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
-    categoria:         { type: DataTypes.ENUM(...CATEGORIAS_VALIDAS), allowNull: false },
-    precoCusto:        { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-    precoVenda:        { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-    fornecedorId:      { type: DataTypes.INTEGER, allowNull: false },
+    id_produto:        { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    nome:              { type: DataTypes.STRING(100), allowNull: false, unique: true },
+    quantidade_estoque:{ type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    estoque_minimo:    { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    categoria:         { type: DataTypes.STRING(100) },
+    preco_custo:       { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    preco_venda:       { type: DataTypes.DECIMAL(10, 2), allowNull: false },
 }, {
     tableName: 'produto',
     freezeTableName: true,
     timestamps: false,
 });
 
-// ── Validações ────────────────────────────────────────────────────────────────
+// ── Validações ──
 
 function normalizarCategoria(categoria) {
     return String(categoria || '').trim().toLowerCase();
 }
 
 function validarCamposObrigatorios(dados) {
-    const campos = ['nome', 'quantidadeEstoque', 'estoqueMinimo', 'categoria', 'precoCusto', 'precoVenda', 'fornecedorId'];
+    const campos = ['nome', 'quantidade_estoque', 'estoque_minimo', 'categoria', 'preco_custo', 'preco_venda'];
     const ausentes = campos.filter(c => dados[c] === undefined || dados[c] === null || dados[c] === '');
     if (ausentes.length > 0) {
         throw new Error(`Campos obrigatórios ausentes: ${ausentes.join(', ')}`);
     }
 }
 
-async function validarFornecedorExiste(fornecedorId) {
-    const FornecedorModel = require('./fornecedor.Model');
-    const fornecedor = await FornecedorModel.buscarPorId(Number(fornecedorId));
-    if (!fornecedor) throw new Error(`Fornecedor com id ${fornecedorId} não encontrado`);
-}
-
 function validarCategoria(categoria) {
-    const categoriaNormalizada = normalizarCategoria(categoria);
-    if (!CATEGORIAS_VALIDAS.includes(categoriaNormalizada)) {
+    const cat = normalizarCategoria(categoria);
+    if (!CATEGORIAS_VALIDAS.includes(cat)) {
         throw new Error(`Categoria inválida. Valores aceitos: ${CATEGORIAS_VALIDAS.join(', ')}`);
     }
 }
 
 function validarNumerosPositivos(dados) {
-    if (dados.quantidadeEstoque < 0) throw new Error('A quantidade em estoque não pode ser negativa');
-    if (dados.estoqueMinimo < 0) throw new Error('O estoque mínimo não pode ser negativo');
-    if (dados.precoCusto <= 0) throw new Error('O preço de custo deve ser maior que zero');
-    if (dados.precoVenda <= 0) throw new Error('O preço de venda deve ser maior que zero');
+    if (dados.quantidade_estoque < 0) throw new Error('A quantidade em estoque não pode ser negativa');
+    if (dados.estoque_minimo < 0) throw new Error('O estoque mínimo não pode ser negativo');
+    if (dados.preco_custo <= 0) throw new Error('O preço de custo deve ser maior que zero');
+    if (dados.preco_venda <= 0) throw new Error('O preço de venda deve ser maior que zero');
 }
 
 async function validarNomeUnico(nome, idIgnorado = null) {
     const where = { nome };
-    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    if (idIgnorado) where.id_produto = { [Op.ne]: idIgnorado };
     const existe = await Produto.findOne({ where });
     if (existe) throw new Error('Já existe um produto com este nome');
 }
@@ -65,20 +58,15 @@ async function validarProduto(dados, idIgnorado = null) {
     validarCamposObrigatorios(dados);
     validarCategoria(dados.categoria);
     validarNumerosPositivos(dados);
-    await validarFornecedorExiste(dados.fornecedorId);
     await validarNomeUnico(dados.nome, idIgnorado);
 }
 
-// ── Funções de dados ──────────────────────────────────────────────────────────
+// ── Funções de dados ──
 
 async function listarTodos(filtros = {}) {
     const where = {};
     if (filtros.categoria) where.categoria = filtros.categoria.toLowerCase();
-    if (filtros.fornecedorId !== undefined) {
-        const fid = Number(filtros.fornecedorId);
-        if (!Number.isNaN(fid)) where.fornecedorId = fid;
-    }
-    return Produto.findAll({ where, order: [['id', 'ASC']] });
+    return Produto.findAll({ where, order: [['id_produto', 'ASC']] });
 }
 
 async function buscarPorId(id) {
@@ -88,13 +76,12 @@ async function buscarPorId(id) {
 async function criar(dados) {
     await validarProduto(dados);
     return Produto.create({
-        nome:              dados.nome,
-        quantidadeEstoque: Number(dados.quantidadeEstoque),
-        estoqueMinimo:     Number(dados.estoqueMinimo),
-        categoria:         normalizarCategoria(dados.categoria),
-        precoCusto:        Number(dados.precoCusto),
-        precoVenda:        Number(dados.precoVenda),
-        fornecedorId:      Number(dados.fornecedorId),
+        nome:               dados.nome,
+        quantidade_estoque: Number(dados.quantidade_estoque),
+        estoque_minimo:     Number(dados.estoque_minimo),
+        categoria:          normalizarCategoria(dados.categoria),
+        preco_custo:        Number(dados.preco_custo),
+        preco_venda:        Number(dados.preco_venda),
     });
 }
 
@@ -104,13 +91,12 @@ async function atualizar(id, dados) {
     if (!produto) return null;
     await validarProduto(dados, id);
     await produto.update({
-        nome:              dados.nome,
-        quantidadeEstoque: Number(dados.quantidadeEstoque),
-        estoqueMinimo:     Number(dados.estoqueMinimo),
-        categoria:         normalizarCategoria(dados.categoria),
-        precoCusto:        Number(dados.precoCusto),
-        precoVenda:        Number(dados.precoVenda),
-        fornecedorId:      Number(dados.fornecedorId),
+        nome:               dados.nome,
+        quantidade_estoque: Number(dados.quantidade_estoque),
+        estoque_minimo:     Number(dados.estoque_minimo),
+        categoria:          normalizarCategoria(dados.categoria),
+        preco_custo:        Number(dados.preco_custo),
+        preco_venda:        Number(dados.preco_venda),
     });
     return produto;
 }
@@ -125,14 +111,14 @@ async function atualizarParcial(id, dados) {
         validarCategoria(dados.categoria);
         dados = { ...dados, categoria: normalizarCategoria(dados.categoria) };
     }
-    if (dados.quantidadeEstoque !== undefined && dados.quantidadeEstoque < 0) throw new Error('A quantidade em estoque não pode ser negativa');
-    if (dados.estoqueMinimo !== undefined && dados.estoqueMinimo < 0) throw new Error('O estoque mínimo não pode ser negativo');
-    if (dados.precoCusto !== undefined && dados.precoCusto <= 0) throw new Error('O preço de custo deve ser maior que zero');
-    if (dados.precoVenda !== undefined && dados.precoVenda <= 0) throw new Error('O preço de venda deve ser maior que zero');
-    if (dados.fornecedorId !== undefined) {
-        await validarFornecedorExiste(dados.fornecedorId);
-        dados = { ...dados, fornecedorId: Number(dados.fornecedorId) };
-    }
+    if (dados.quantidade_estoque !== undefined && dados.quantidade_estoque < 0)
+        throw new Error('A quantidade em estoque não pode ser negativa');
+    if (dados.estoque_minimo !== undefined && dados.estoque_minimo < 0)
+        throw new Error('O estoque mínimo não pode ser negativo');
+    if (dados.preco_custo !== undefined && dados.preco_custo <= 0)
+        throw new Error('O preço de custo deve ser maior que zero');
+    if (dados.preco_venda !== undefined && dados.preco_venda <= 0)
+        throw new Error('O preço de venda deve ser maior que zero');
 
     await produto.update(dados);
     return produto;

@@ -1,68 +1,82 @@
 const sequelize = require('../../config/localConnection');
 const { DataTypes, Op } = require('sequelize');
-const ClienteModel  = require('./clienteModel');
-const ProdutoModel  = require('./produtoModel');
-const SaidaModel    = require('./saidaModel');
+const ClienteModel   = require('./clienteModel');
+const ProdutoModel   = require('./produtoModel');
+const EstoqueModel   = require('./estoqueModel');
 const { CONSUMIDOR_FINAL_ID } = require('./clienteModel');
-const PagamentoModel = require('./pagamentoModel');
+const LogModel       = require('./logModel');
+const { Produto }    = require('./produtoModel');
+const FichaModel     = require('./fichaModel');
 
-const STATUS = { ABERTA: 'aberta', FECHADA: 'fechada', CANCELADA: 'cancelada' };
+const STATUS = { ABERTA: 'aberta', FECHADA: 'fechada', CANCELADA: 'cancelada', A_RECEBER: 'a receber' };
 
 // ── Schema ──
 
 const Comanda = sequelize.define('Comanda', {
-    id:          { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    status:      { type: DataTypes.ENUM(...Object.values(STATUS)), allowNull: false, defaultValue: STATUS.ABERTA },
-    infoCliente: { type: DataTypes.STRING },
-    clienteId:   { type: DataTypes.INTEGER, allowNull: false, defaultValue: CONSUMIDOR_FINAL_ID },
-    total:       { type: DataTypes.DECIMAL(10, 2), allowNull: false, defaultValue: 0 },
+    id_comanda:        { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    fk_cliente:        { type: DataTypes.INTEGER, allowNull: true },
+    identificacao:     { type: DataTypes.STRING(50) },
+    valor_total:       { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+    valor_debito:      { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+    status:            { type: DataTypes.STRING(30), allowNull: false, defaultValue: STATUS.ABERTA },
+    data_hora_inicio:  { type: DataTypes.DATE, allowNull: false },
+    data_hora_termino: { type: DataTypes.DATE },
+    forma_pagamento:   { type: DataTypes.STRING(50) },
 }, {
     tableName: 'comanda',
     freezeTableName: true,
     timestamps: false,
 });
 
-const ComandaItem = sequelize.define('ComandaItem', {
-    id:            { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    comandaId:     { type: DataTypes.INTEGER, allowNull: false },
-    produtoId:     { type: DataTypes.INTEGER, allowNull: false },
-    nomeProduto:   { type: DataTypes.STRING, allowNull: false },
-    precoUnitario: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+const Consumo = sequelize.define('Consumo', {
+    id_consumo:    { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    fk_produto:    { type: DataTypes.INTEGER, allowNull: false },
+    fk_comanda:    { type: DataTypes.INTEGER, allowNull: false },
     quantidade:    { type: DataTypes.INTEGER, allowNull: false },
-    subtotal:      { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    hora_inclusao: { type: DataTypes.DATE, allowNull: false },
+    observacoes:   { type: DataTypes.STRING(255) },
 }, {
-    tableName: 'comanda_item',
+    tableName: 'consumo',
     freezeTableName: true,
     timestamps: false,
 });
 
-// Associações locais
-Comanda.hasMany(ComandaItem, { foreignKey: 'comandaId', as: 'itens' });
-ComandaItem.belongsTo(Comanda, { foreignKey: 'comandaId' });
+// Associações
+Comanda.hasMany(Consumo, { foreignKey: 'fk_comanda', as: 'consumos' });
+Consumo.belongsTo(Comanda, { foreignKey: 'fk_comanda' });
+Consumo.belongsTo(Produto, { foreignKey: 'fk_produto', as: 'produto' });
+Produto.hasMany(Consumo, { foreignKey: 'fk_produto' });
 
+// ── Helpers ──
 
-async function quantidadeReservada(produtoId, ignorarComandaId = null) {
+async function _buscarComandaComConsumos(id) {
+    return Comanda.findByPk(id, {
+        include: [{ model: Consumo, as: 'consumos', include: [{ model: Produto, as: 'produto' }] }],
+    });
+}
+
+async function quantidadeReservada(fk_produto, ignorarComandaId = null) {
     const where = { status: STATUS.ABERTA };
-    if (ignorarComandaId) where.id = { [Op.ne]: ignorarComandaId };
-    const abertas = await Comanda.findAll({ attributes: ['id'], where });
-    const ids = abertas.map(c => c.id);
+    if (ignorarComandaId) where.id_comanda = { [Op.ne]: ignorarComandaId };
+    const abertas = await Comanda.findAll({ attributes: ['id_comanda'], where });
+    const ids = abertas.map(c => c.id_comanda);
     if (ids.length === 0) return 0;
-    const result = await ComandaItem.findAll({
+    const result = await Consumo.findAll({
         attributes: [[sequelize.fn('SUM', sequelize.col('quantidade')), 'total']],
-        where: { produtoId, comandaId: { [Op.in]: ids } },
+        where: { fk_produto, fk_comanda: { [Op.in]: ids } },
         raw: true,
     });
     return Number(result[0]?.total || 0);
 }
 
-async function estoqueDisponivel(produtoId, ignorarComandaId = null) {
-    const produto = await ProdutoModel.buscarPorId(produtoId);
-    if (!produto) throw new Error(`Produto com id ${produtoId} não encontrado`);
-    const reservado = await quantidadeReservada(produtoId, ignorarComandaId);
-    return produto.quantidadeEstoque - reservado;
+async function estoqueDisponivel(fk_produto, ignorarComandaId = null) {
+    const produto = await ProdutoModel.buscarPorId(fk_produto);
+    if (!produto) throw new Error(`Produto com id ${fk_produto} não encontrado`);
+    const reservado = await quantidadeReservada(fk_produto, ignorarComandaId);
+    return produto.quantidade_estoque - reservado;
 }
 
-// ── Validações ────────────────────────────────────────────────────────────────
+// ── Validações ──
 
 async function validarClienteExiste(clienteId) {
     const cliente = await ClienteModel.buscarPorId(clienteId);
@@ -85,183 +99,218 @@ function validarQuantidade(quantidade) {
 }
 
 function validarComandaAberta(comanda) {
-    if (comanda.status === STATUS.FECHADA || comanda.status === STATUS.CANCELADA) {
+    if (comanda.status !== STATUS.ABERTA) {
         throw new Error('Não é possível alterar uma comanda fechada ou cancelada');
     }
 }
 
-// ── Cálculo do total ──────────────────────────────────────────────────────────
-
-function calcularTotal(itens) {
-    return itens.reduce((soma, item) => soma + Number(item.subtotal), 0);
-}
-
-// helper interno
-async function _buscarComandaComItens(id) {
-    return Comanda.findByPk(id, { include: [{ model: ComandaItem, as: 'itens' }] });
-}
-
-// ── Funções de dados ──────────────────────────────────────────────────────────
+// ── Funções de dados ──
 
 async function listarTodos(filtros = {}) {
     const where = {};
     if (filtros.status) where.status = filtros.status;
-    return Comanda.findAll({ where, include: [{ model: ComandaItem, as: 'itens' }], order: [['id', 'ASC']] });
+    return Comanda.findAll({
+        where,
+        include: [{ model: Consumo, as: 'consumos', include: [{ model: Produto, as: 'produto' }] }],
+        order: [['id_comanda', 'ASC']],
+    });
 }
 
 async function buscarPorId(id) {
-    return _buscarComandaComItens(id);
+    return _buscarComandaComConsumos(id);
 }
 
-// Abre uma nova comanda — clienteId e infoCliente são opcionais
-// Se clienteId não for informado, usa Consumidor Final automaticamente
 async function criar(dados = {}) {
-    const clienteId = dados.clienteId ? Number(dados.clienteId) : CONSUMIDOR_FINAL_ID;
-    await validarClienteExiste(clienteId);
+    const fk_cliente = dados.fk_cliente ? Number(dados.fk_cliente) : CONSUMIDOR_FINAL_ID;
+    await validarClienteExiste(fk_cliente);
     const novaComanda = await Comanda.create({
-        status:      STATUS.ABERTA,
-        infoCliente: dados.infoCliente || null,
-        clienteId,
-        total:       0,
+        fk_cliente,
+        identificacao:    dados.identificacao || null,
+        status:           STATUS.ABERTA,
+        data_hora_inicio: new Date(),
+        valor_total:      0,
+        valor_debito:     0,
     });
-    return _buscarComandaComItens(novaComanda.id);
+    const fk_usuario = dados.fk_usuario || 1;
+    await LogModel.registrar({
+        fk_usuario,
+        fk_comanda: novaComanda.id_comanda,
+        tipo: 'abrir_comanda',
+        descricao: `Comanda ${novaComanda.id_comanda} aberta`,
+    });
+    return _buscarComandaComConsumos(novaComanda.id_comanda);
 }
 
-// Atualiza infoCliente e/ou clienteId enquanto a comanda estiver aberta
 async function atualizarCabecalho(id, dados) {
-    const comanda = await _buscarComandaComItens(id);
+    const comanda = await _buscarComandaComConsumos(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
-
     const updates = {};
-    if (dados.infoCliente !== undefined) updates.infoCliente = dados.infoCliente || null;
-    if (dados.clienteId !== undefined) {
-        const clienteId = dados.clienteId ? Number(dados.clienteId) : CONSUMIDOR_FINAL_ID;
-        await validarClienteExiste(clienteId);
-        updates.clienteId = clienteId;
+    if (dados.identificacao !== undefined) updates.identificacao = dados.identificacao || null;
+    if (dados.fk_cliente !== undefined) {
+        const fk_cliente = dados.fk_cliente ? Number(dados.fk_cliente) : CONSUMIDOR_FINAL_ID;
+        await validarClienteExiste(fk_cliente);
+        updates.fk_cliente = fk_cliente;
     }
     await comanda.update(updates);
-    return comanda;
+    return _buscarComandaComConsumos(id);
 }
 
-// Adiciona um item ou incrementa a quantidade se o produto já estiver na comanda.
-// Valida disponibilidade considerando o que outras comandas abertas já reservaram.
-async function adicionarItem(id, dados) {
-    const comanda = await _buscarComandaComItens(id);
+async function adicionarConsumo(id, dados) {
+    const comanda = await _buscarComandaComConsumos(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
 
-    const produto = await validarProdutoExiste(Number(dados.produtoId));
+    const produto = await validarProdutoExiste(Number(dados.fk_produto));
     const qtdAdd  = validarQuantidade(dados.quantidade);
 
-    const itemExistente = comanda.itens.find(i => i.produtoId === produto.id);
-    const qtdNaComanda  = itemExistente ? itemExistente.quantidade : 0;
+    const consumoExistente = comanda.consumos.find(c => c.fk_produto === produto.id_produto);
+    const qtdNaComanda     = consumoExistente ? consumoExistente.quantidade : 0;
 
-    const disponivel = await estoqueDisponivel(produto.id, id);
-
+    const disponivel = await estoqueDisponivel(produto.id_produto, id);
     if (qtdNaComanda + qtdAdd > disponivel) {
         throw new Error(
             `Estoque insuficiente. Disponível (fora desta comanda): ${disponivel - qtdNaComanda}, solicitado: ${qtdAdd}`
         );
     }
 
-    if (itemExistente) {
-        const novaQtd = itemExistente.quantidade + qtdAdd;
-        await itemExistente.update({
-            quantidade: novaQtd,
-            subtotal:   novaQtd * Number(itemExistente.precoUnitario),
-        });
+    if (consumoExistente) {
+        await consumoExistente.update({ quantidade: consumoExistente.quantidade + qtdAdd });
     } else {
-        await ComandaItem.create({
-            comandaId:     comanda.id,
-            produtoId:     produto.id,
-            nomeProduto:   produto.nome,
-            precoUnitario: Number(produto.precoVenda),
+        await Consumo.create({
+            fk_comanda:    id,
+            fk_produto:    produto.id_produto,
             quantidade:    qtdAdd,
-            subtotal:      qtdAdd * Number(produto.precoVenda),
+            hora_inclusao: new Date(),
+            observacoes:   dados.observacoes || null,
         });
     }
 
-    // Recalcula total
-    const atualizada = await _buscarComandaComItens(id);
-    await atualizada.update({ total: calcularTotal(atualizada.itens) });
-    return _buscarComandaComItens(id);
-}
+    const incremento = qtdAdd * Number(produto.preco_venda);
+    await comanda.update({ valor_total: Number(comanda.valor_total) + incremento });
 
-// Altera a quantidade de um item (envia a quantidade NOVA desejada).
-async function atualizarItem(id, produtoId, dados) {
-    const comanda = await _buscarComandaComItens(id);
-    if (!comanda) return null;
-    validarComandaAberta(comanda);
-
-    const pId = Number(produtoId);
-    const item = comanda.itens.find(i => i.produtoId === pId);
-    if (!item) throw new Error(`Produto com id ${pId} não encontrado na comanda`);
-
-    const novaQtd = validarQuantidade(dados.quantidade);
-    const disponivel = await estoqueDisponivel(pId, id);
-
-    if (novaQtd > disponivel) {
-        throw new Error(
-            `Estoque insuficiente. Disponível (fora desta comanda): ${disponivel}, solicitado: ${novaQtd}`
-        );
-    }
-
-    await item.update({
-        quantidade: novaQtd,
-        subtotal:   novaQtd * Number(item.precoUnitario),
+    const fk_usuario = dados.fk_usuario || 1;
+    await LogModel.registrar({
+        fk_usuario,
+        fk_comanda: id,
+        tipo: 'adicionar_consumo',
+        descricao: `Produto ${produto.id_produto} (${produto.nome}) x${qtdAdd} adicionado à comanda ${id}`,
     });
 
-    const atualizada = await _buscarComandaComItens(id);
-    await atualizada.update({ total: calcularTotal(atualizada.itens) });
-    return _buscarComandaComItens(id);
+    return _buscarComandaComConsumos(id);
 }
 
-// Remove um item da comanda — sem movimentar estoque (ainda não foi baixado)
-async function removerItem(id, produtoId) {
-    const comanda = await _buscarComandaComItens(id);
+async function atualizarConsumo(id, consumoId, dados) {
+    const comanda = await _buscarComandaComConsumos(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
 
-    const pId = Number(produtoId);
-    const item = comanda.itens.find(i => i.produtoId === pId);
-    if (!item) throw new Error(`Produto com id ${pId} não encontrado na comanda`);
+    const consumo = comanda.consumos.find(c => c.id_consumo === Number(consumoId));
+    if (!consumo) throw new Error(`Consumo com id ${consumoId} não encontrado na comanda`);
 
-    await item.destroy();
-    const atualizada = await _buscarComandaComItens(id);
-    await atualizada.update({ total: calcularTotal(atualizada.itens) });
-    return _buscarComandaComItens(id);
+    const novaQtd    = validarQuantidade(dados.quantidade);
+    const disponivel = await estoqueDisponivel(consumo.fk_produto, id);
+    if (novaQtd > disponivel) {
+        throw new Error(`Estoque insuficiente. Disponível: ${disponivel}, solicitado: ${novaQtd}`);
+    }
+
+    const produto = await validarProdutoExiste(consumo.fk_produto);
+    const diff    = novaQtd - consumo.quantidade;
+
+    await consumo.update({
+        quantidade:  novaQtd,
+        observacoes: dados.observacoes !== undefined ? dados.observacoes : consumo.observacoes,
+    });
+    await comanda.update({ valor_total: Number(comanda.valor_total) + diff * Number(produto.preco_venda) });
+
+    return _buscarComandaComConsumos(id);
 }
 
-// Fecha a comanda: registra as saídas no estoque e marca a comanda como fechada.
-async function fechar(id) {
-    const comanda = await _buscarComandaComItens(id);
+async function removerConsumo(id, consumoId) {
+    const comanda = await _buscarComandaComConsumos(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
 
-    if (comanda.itens.length === 0) {
-        throw new Error('Não é possível fechar uma comanda sem itens');
-    }
+    const consumo = comanda.consumos.find(c => c.id_consumo === Number(consumoId));
+    if (!consumo) throw new Error(`Consumo com id ${consumoId} não encontrado na comanda`);
 
-    for (const item of comanda.itens) {
-        await SaidaModel.registrarSaidaVenda(item.produtoId, item.quantidade);
-    }
+    const produto    = await validarProdutoExiste(consumo.fk_produto);
+    const decremento = consumo.quantidade * Number(produto.preco_venda);
 
-    await comanda.update({ status: STATUS.FECHADA });
+    await consumo.destroy();
+    await comanda.update({ valor_total: Math.max(0, Number(comanda.valor_total) - decremento) });
 
-    // Gera o registro de pagamento pendente (in-memory)
-    const pagamento = PagamentoModel.criar(comanda.id, comanda.clienteId, comanda.total);
-
-    return { comanda, pagamento };
+    return _buscarComandaComConsumos(id);
 }
 
-// Cancela a comanda sem movimentar estoque (nada foi baixado)
+async function fechar(id, dados = {}) {
+    const comanda = await _buscarComandaComConsumos(id);
+    if (!comanda) return null;
+    validarComandaAberta(comanda);
+
+    if (comanda.consumos.length === 0) {
+        throw new Error('Não é possível fechar uma comanda sem consumos');
+    }
+    if (!dados.forma_pagamento) {
+        throw new Error('Forma de pagamento é obrigatória para fechar a comanda');
+    }
+
+    // RF14: pagamento por ficha exige cliente cadastrado (não Consumidor Final)
+    const ehFicha = dados.forma_pagamento.toLowerCase() === 'ficha';
+    if (ehFicha) {
+        if (!comanda.fk_cliente || comanda.fk_cliente === CONSUMIDOR_FINAL_ID) {
+            throw new Error(
+                'Para pagamento por ficha é obrigatório vincular um cliente cadastrado (não "Consumidor Final")'
+            );
+        }
+    }
+
+    for (const consumo of comanda.consumos) {
+        await EstoqueModel.saida(consumo.fk_produto, consumo.quantidade);
+    }
+
+    const novoStatus = ehFicha ? STATUS.A_RECEBER : STATUS.FECHADA;
+
+    await comanda.update({
+        status:            novoStatus,
+        data_hora_termino: new Date(),
+        forma_pagamento:   dados.forma_pagamento,
+        valor_debito:      dados.valor_debito ? Number(dados.valor_debito) : 0,
+    });
+
+    // RF14: criar dívida automaticamente quando o pagamento for ficha
+    if (ehFicha) {
+        await FichaModel.criar({
+            fk_cliente: comanda.fk_cliente,
+            fk_comanda: comanda.id_comanda,
+            debito:     Number(comanda.valor_total),
+        });
+    }
+
+    const fk_usuario = dados.fk_usuario || 1;
+    await LogModel.registrar({
+        fk_usuario,
+        fk_comanda: comanda.id_comanda,
+        tipo:      ehFicha ? 'comanda_ficha' : 'fechar_comanda',
+        descricao: ehFicha
+            ? `Comanda ${comanda.id_comanda} lançada na ficha do cliente ${comanda.fk_cliente}`
+            : `Comanda ${comanda.id_comanda} fechada. Pagamento: ${dados.forma_pagamento}`,
+    });
+
+    return _buscarComandaComConsumos(id);
+}
+
 async function cancelar(id) {
-    const comanda = await _buscarComandaComItens(id);
+    const comanda = await _buscarComandaComConsumos(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
-    await comanda.update({ status: STATUS.CANCELADA });
+    await comanda.update({ status: STATUS.CANCELADA, data_hora_termino: new Date() });
     return comanda;
 }
 
-module.exports = { Comanda, ComandaItem, listarTodos, buscarPorId, criar, atualizarCabecalho, adicionarItem, atualizarItem, removerItem, fechar, cancelar, STATUS };
+module.exports = {
+    Comanda, Consumo,
+    listarTodos, buscarPorId, criar, atualizarCabecalho,
+    adicionarConsumo, atualizarConsumo, removerConsumo,
+    fechar, cancelar, STATUS,
+};

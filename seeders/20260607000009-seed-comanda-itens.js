@@ -1,72 +1,21 @@
 'use strict';
 
-// 5 itens distribuídos em 4 das 5 comandas.
-// A comanda 4 está cancelada e não possui itens.
-//
-// Relacionamento:
-//   item 1 → comanda 1 (fechada), produto 1 (Coca-Cola)
-//   item 2 → comanda 2 (fechada), produto 4 (Cerveja Pilsen)
-//   item 3 → comanda 3 (aberta),  produto 2 (Pastel de Queijo)
-//   item 4 → comanda 3 (aberta),  produto 3 (Amendoim Torrado)
-//   item 5 → comanda 5 (aberta),  produto 5 (Copo Descartável)
-
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
     async up(queryInterface) {
-        await queryInterface.bulkInsert('comanda_item', [
-            {
-                id: 1,
-                comandaId: 1,
-                produtoId: 1,
-                nomeProduto: 'Coca-Cola Lata 350ml',
-                precoUnitario: 5.00,
-                quantidade: 7,
-                subtotal: 35.00,
-            },
-            {
-                id: 2,
-                comandaId: 2,
-                produtoId: 4,
-                nomeProduto: 'Cerveja Pilsen 600ml',
-                precoUnitario: 12.00,
-                quantidade: 2,
-                subtotal: 24.00,
-            },
-            {
-                id: 3,
-                comandaId: 3,
-                produtoId: 2,
-                nomeProduto: 'Pastel de Queijo',
-                precoUnitario: 10.00,
-                quantidade: 2,
-                subtotal: 20.00,
-            },
-            {
-                id: 4,
-                comandaId: 3,
-                produtoId: 3,
-                nomeProduto: 'Amendoim Torrado 100g',
-                precoUnitario: 6.00,
-                quantidade: 2,
-                subtotal: 12.00,
-            },
-            {
-                id: 5,
-                comandaId: 5,
-                produtoId: 5,
-                nomeProduto: 'Copo Descartável 200ml',
-                precoUnitario: 0.50,
-                quantidade: 6,
-                subtotal: 3.00,
-            },
+        await queryInterface.bulkInsert('consumo', [
+            { id_consumo: 1, fk_comanda: 1, fk_produto: 1, quantidade: 7, hora_inclusao: '2026-06-07 18:10:00', observacoes: null },
+            { id_consumo: 2, fk_comanda: 2, fk_produto: 4, quantidade: 2, hora_inclusao: '2026-06-07 18:40:00', observacoes: null },
+            { id_consumo: 3, fk_comanda: 3, fk_produto: 2, quantidade: 2, hora_inclusao: '2026-06-07 19:05:00', observacoes: null },
+            { id_consumo: 4, fk_comanda: 3, fk_produto: 3, quantidade: 2, hora_inclusao: '2026-06-07 19:10:00', observacoes: null },
+            { id_consumo: 5, fk_comanda: 5, fk_produto: 5, quantidade: 6, hora_inclusao: '2026-06-07 19:35:00', observacoes: null },
         ], { ignoreDuplicates: true });
 
         await queryInterface.sequelize.query(
-            `SELECT setval('comanda_item_id_seq', (SELECT MAX(id) FROM comanda_item));`
+            `SELECT setval('consumo_id_consumo_seq', (SELECT MAX(id_consumo) FROM consumo));`
         );
     },
-
     async down(queryInterface) {
-        await queryInterface.bulkDelete('comanda_item', { id: [1, 2, 3, 4, 5] });
+        await queryInterface.bulkDelete('consumo', null);
     },
 };

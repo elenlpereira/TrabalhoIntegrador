@@ -4,23 +4,13 @@
 module.exports = {
     async up(queryInterface, Sequelize) {
         await queryInterface.createTable('produto', {
-            id:                { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
-            nome:              { type: Sequelize.STRING, allowNull: false, unique: true },
-            quantidadeEstoque: { type: Sequelize.INTEGER, allowNull: false, defaultValue: 0 },
-            estoqueMinimo:     { type: Sequelize.INTEGER, allowNull: false, defaultValue: 0 },
-            categoria:         {
-                type: Sequelize.ENUM('bebidas', 'alimentos', 'mercearia', 'outros'),
-                allowNull: false,
-            },
-            precoCusto:   { type: Sequelize.DECIMAL(10, 2), allowNull: false },
-            precoVenda:   { type: Sequelize.DECIMAL(10, 2), allowNull: false },
-            fornecedorId: {
-                type: Sequelize.INTEGER,
-                allowNull: false,
-                references: { model: 'fornecedor', key: 'id' },
-                onUpdate: 'CASCADE',
-                onDelete: 'RESTRICT',
-            },
+            id_produto:         { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
+            nome:               { type: Sequelize.STRING(100), allowNull: false, unique: true },
+            quantidade_estoque: { type: Sequelize.INTEGER, allowNull: false, defaultValue: 0 },
+            estoque_minimo:     { type: Sequelize.INTEGER, allowNull: false, defaultValue: 0 },
+            categoria:          { type: Sequelize.STRING(100) },
+            preco_custo:        { type: Sequelize.DECIMAL(10, 2), allowNull: false },
+            preco_venda:        { type: Sequelize.DECIMAL(10, 2), allowNull: false },
         });
     },
     async down(queryInterface) {

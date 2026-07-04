@@ -5,11 +5,11 @@ const { DataTypes, Op } = require('sequelize');
 // ── Schema ──
 
 const Usuario = sequelize.define('Usuario', {
-    id:           { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    nomeCompleto: { type: DataTypes.STRING(100), allowNull: false },
-    email:        { type: DataTypes.STRING, allowNull: false, unique: true },
-    senha:        { type: DataTypes.STRING, allowNull: false },
-    perfil:       { type: DataTypes.ENUM('Atendente', 'Gerente'), allowNull: false },
+    id_usuario:    { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    nome:          { type: DataTypes.STRING(100), allowNull: false },
+    email:         { type: DataTypes.STRING(100), allowNull: false, unique: true },
+    senha:         { type: DataTypes.STRING(255), allowNull: false },
+    perfil_acesso: { type: DataTypes.STRING(50), allowNull: false },
 }, {
     tableName: 'usuario',
     freezeTableName: true,
@@ -23,8 +23,8 @@ function validarEmail(email) {
 }
 
 function validarCamposObrigatorios(dados) {
-    if (!dados.nomeCompleto || !dados.email || !dados.senha || !dados.confirmacaoSenha || !dados.perfil) {
-        throw new Error('Campos obrigatórios ausentes: nomeCompleto, email, senha, confirmacaoSenha, perfil');
+    if (!dados.nome || !dados.email || !dados.senha || !dados.confirmacaoSenha || !dados.perfil_acesso) {
+        throw new Error('Campos obrigatórios ausentes: nome, email, senha, confirmacaoSenha, perfil_acesso');
     }
 }
 
@@ -34,15 +34,15 @@ function validarSenhasIguais(senha, confirmacaoSenha) {
     }
 }
 
-function validarPerfil(perfil) {
-    if (!['Atendente', 'Gerente'].includes(perfil)) {
+function validarPerfil(perfil_acesso) {
+    if (!['Atendente', 'Gerente'].includes(perfil_acesso)) {
         throw new Error('Perfil inválido. Valores aceitos: Atendente, Gerente');
     }
 }
 
 async function validarEmailUnico(email, idIgnorado = null) {
     const where = { email };
-    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    if (idIgnorado) where.id_usuario = { [Op.ne]: idIgnorado };
     const existe = await Usuario.findOne({ where });
     if (existe) throw new Error('E-mail já cadastrado');
 }
@@ -56,14 +56,14 @@ async function validarUsuario(dados, idIgnorado = null) {
         throw new Error('A senha deve ter no mínimo 6 caracteres');
     }
     validarSenhasIguais(dados.senha, dados.confirmacaoSenha);
-    validarPerfil(dados.perfil);
+    validarPerfil(dados.perfil_acesso);
     await validarEmailUnico(dados.email, idIgnorado);
 }
 
 // ── Funções de dados ──────────────────────────────────────────────────────────
 
 async function listarTodos() {
-    return Usuario.findAll({ attributes: { exclude: ['senha'] }, order: [['id', 'ASC']] });
+    return Usuario.findAll({ attributes: { exclude: ['senha'] }, order: [['id_usuario', 'ASC']] });
 }
 
 async function buscarPorId(id) {
@@ -77,10 +77,10 @@ async function criar(dados) {
     await validarUsuario(dados);
     const senhaHash = bcrypt.hashSync(dados.senha, 10);
     const novo = await Usuario.create({
-        nomeCompleto: dados.nomeCompleto,
-        email:        dados.email,
-        senha:        senhaHash,
-        perfil:       dados.perfil,
+        nome:          dados.nome,
+        email:         dados.email,
+        senha:         senhaHash,
+        perfil_acesso: dados.perfil_acesso,
     });
     const { senha, ...semSenha } = novo.toJSON();
     return semSenha;
@@ -92,10 +92,10 @@ async function atualizar(id, dados) {
     if (!usuario) return null;
     await validarUsuario(dados, id);
     await usuario.update({
-        nomeCompleto: dados.nomeCompleto,
-        email:        dados.email,
-        senha:        bcrypt.hashSync(dados.senha, 10),
-        perfil:       dados.perfil,
+        nome:          dados.nome,
+        email:         dados.email,
+        senha:         bcrypt.hashSync(dados.senha, 10),
+        perfil_acesso: dados.perfil_acesso,
     });
     const { senha, ...semSenha } = usuario.toJSON();
     return semSenha;
@@ -110,7 +110,7 @@ async function atualizarParcial(id, dados) {
         if (!validarEmail(dados.email)) throw new Error('Formato de e-mail inválido');
         await validarEmailUnico(dados.email, id);
     }
-    if (dados.perfil) validarPerfil(dados.perfil);
+    if (dados.perfil_acesso) validarPerfil(dados.perfil_acesso);
     if (dados.senha) {
         if (!dados.confirmacaoSenha) throw new Error('Confirmação de senha obrigatória ao alterar a senha');
         validarSenhasIguais(dados.senha, dados.confirmacaoSenha);

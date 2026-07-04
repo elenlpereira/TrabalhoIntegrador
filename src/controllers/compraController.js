@@ -1,7 +1,6 @@
 const CompraModel = require('../models/compraModel');
-const FornecedorModel = require('../models/fornecedor.Model');
-const RESP_HTTP = require('../../consts');
-const helper = require('./helpers');
+const RESP_HTTP   = require('../../consts');
+const helper      = require('./helpers');
 
 async function listar(req, res) {
     const compras = await CompraModel.listarTodos();
@@ -19,7 +18,9 @@ async function buscar(req, res) {
 async function criar(req, res) {
     try {
         const novaCompra = await CompraModel.criar(req.body);
-        res.status(RESP_HTTP.CREATED).set('Location', '/api/compras/' + novaCompra.id).json(novaCompra);
+        res.status(RESP_HTTP.CREATED)
+            .set('Location', '/api/compras/' + novaCompra.id_compra)
+            .json(novaCompra);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
     }
@@ -37,9 +38,4 @@ async function remover(req, res) {
     }
 }
 
-async function listarFornecedores(req, res) {
-    const fornecedores = await FornecedorModel.listarTodos();
-    res.status(RESP_HTTP.OK).json({ total: fornecedores.length, fornecedores });
-}
-
-module.exports = { listar, buscar, criar, remover, listarFornecedores };
+module.exports = { listar, buscar, criar, remover };

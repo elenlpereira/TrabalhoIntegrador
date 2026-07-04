@@ -81,9 +81,9 @@ cp .env.example .env
 ### 3. Criar o banco de dados no PostgreSQL
 
 ```bash
-createdb -U postgres prog2
+createdb -U postgres sistema_bar
 # ou via psql:
-psql -U postgres -c "CREATE DATABASE prog2;"
+psql -U postgres -c "CREATE DATABASE sistema_bar;"
 ```
 
 ### 4. Criar o `config/config.json` (necessário para o sequelize-cli)

@@ -33,7 +33,7 @@ async function buscarNome(req, res) {
 async function criar(req, res) {
     try {
         const novoCliente = await CLienteModel.criar(req.body);
-        res.status(RESP_HTTP.CREATED).set('Location', '/api/clientes/' + novoCliente.id).json(novoCliente);
+        res.status(RESP_HTTP.CREATED).set('Location', '/api/clientes/' + novoCliente.id_cliente).json(novoCliente);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
     }

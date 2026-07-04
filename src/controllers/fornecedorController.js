@@ -1,4 +1,4 @@
-const FornecedorModel = require('../models/fornecedor.Model');
+const FornecedorModel = require('../models/fornecedorModel');
 const RESP_HTTP = require('../../consts');
 const helper = require('./helpers');
  
@@ -39,7 +39,7 @@ function listarCategorias(req, res) {
 async function criar(req, res) {
     try {
         const novoFornecedor = await FornecedorModel.criar(req.body);
-        res.status(RESP_HTTP.CREATED).set('Location', '/api/fornecedores/' + novoFornecedor.id).json(novoFornecedor);
+        res.status(RESP_HTTP.CREATED).set('Location', '/api/fornecedores/' + novoFornecedor.id_fornecedor).json(novoFornecedor);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
     }

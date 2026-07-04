@@ -19,7 +19,7 @@ async function criar(req, res) {
     try {
         const novaComanda = await ComandaModel.criar(req.body);
         res.status(RESP_HTTP.CREATED)
-            .set('Location', '/api/comandas/' + novaComanda.id)
+            .set('Location', '/api/comandas/' + novaComanda.id_comanda)
             .json(novaComanda);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
@@ -38,11 +38,11 @@ async function atualizarCabecalho(req, res) {
     }
 }
 
-async function adicionarItem(req, res) {
+async function adicionarConsumo(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
     try {
-        const comanda = await ComandaModel.adicionarItem(id, req.body);
+        const comanda = await ComandaModel.adicionarConsumo(id, req.body);
         if (!comanda) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Comanda não encontrada' });
         res.status(RESP_HTTP.OK).json(comanda);
     } catch (err) {
@@ -50,17 +50,17 @@ async function adicionarItem(req, res) {
     }
 }
 
-async function atualizarItem(req, res) {
+async function atualizarConsumo(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
 
-    const produtoId = Number.parseInt(req.params.produtoId, 10);
-    if (Number.isNaN(produtoId)) {
-        return res.status(RESP_HTTP.BAD_REQUEST).json({ erro: 'produtoId inválido' });
+    const consumoId = Number.parseInt(req.params.consumoId, 10);
+    if (Number.isNaN(consumoId)) {
+        return res.status(RESP_HTTP.BAD_REQUEST).json({ erro: 'consumoId inválido' });
     }
 
     try {
-        const comanda = await ComandaModel.atualizarItem(id, produtoId, req.body);
+        const comanda = await ComandaModel.atualizarConsumo(id, consumoId, req.body);
         if (!comanda) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Comanda não encontrada' });
         res.status(RESP_HTTP.OK).json(comanda);
     } catch (err) {
@@ -68,17 +68,17 @@ async function atualizarItem(req, res) {
     }
 }
 
-async function removerItem(req, res) {
+async function removerConsumo(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
 
-    const produtoId = Number.parseInt(req.params.produtoId, 10);
-    if (Number.isNaN(produtoId)) {
-        return res.status(RESP_HTTP.BAD_REQUEST).json({ erro: 'produtoId inválido' });
+    const consumoId = Number.parseInt(req.params.consumoId, 10);
+    if (Number.isNaN(consumoId)) {
+        return res.status(RESP_HTTP.BAD_REQUEST).json({ erro: 'consumoId inválido' });
     }
 
     try {
-        const comanda = await ComandaModel.removerItem(id, produtoId);
+        const comanda = await ComandaModel.removerConsumo(id, consumoId);
         if (!comanda) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Comanda não encontrada' });
         res.status(RESP_HTTP.OK).json(comanda);
     } catch (err) {
@@ -90,13 +90,9 @@ async function fechar(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
     try {
-        const resultado = await ComandaModel.fechar(id);
-        if (!resultado) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Comanda não encontrada' });
-        res.status(RESP_HTTP.OK).json({
-            mensagem:  'Comanda fechada. Prossiga para o pagamento.',
-            comanda:   resultado.comanda,
-            pagamento: resultado.pagamento,
-    });
+        const comanda = await ComandaModel.fechar(id, req.body);
+        if (!comanda) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Comanda não encontrada' });
+        res.status(RESP_HTTP.OK).json({ mensagem: 'Comanda fechada com sucesso', comanda });
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
     }
@@ -114,4 +110,4 @@ async function cancelar(req, res) {
     }
 }
 
-module.exports = { listar, buscar, criar, atualizarCabecalho, adicionarItem, atualizarItem, removerItem, fechar, cancelar };
+module.exports = { listar, buscar, criar, atualizarCabecalho, adicionarConsumo, atualizarConsumo, removerConsumo, fechar, cancelar };
