@@ -21,7 +21,7 @@ async function buscar(req, res) {
 async function criar(req, res) {
     try {
         const novoProduto = await ProdutoModel.criar(req.body);
-        res.status(RESP_HTTP.CREATED).set('Location', '/api/produtos/' + novoProduto.id).json(novoProduto);
+        res.status(RESP_HTTP.CREATED).set('Location', '/api/produtos/' + novoProduto.id_produto).json(novoProduto);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
     }

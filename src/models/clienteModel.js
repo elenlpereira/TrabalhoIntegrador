@@ -6,11 +6,13 @@ const CONSUMIDOR_FINAL_ID = 1;
 // ── Schema ──
 
 const Cliente = sequelize.define('Cliente', {
-    id:       { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    nome:     { type: DataTypes.STRING(100), allowNull: false },
-    cpf:      { type: DataTypes.STRING(11), allowNull: false, unique: true },
-    telefone: { type: DataTypes.STRING(20) },
-    email:    { type: DataTypes.STRING },
+    id_cliente:      { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    nome:            { type: DataTypes.STRING(100), allowNull: false },
+    cpf:             { type: DataTypes.STRING(14), allowNull: false, unique: true },
+    telefone:        { type: DataTypes.STRING(20) },
+    email:           { type: DataTypes.STRING(100) },
+    data_nascimento: { type: DataTypes.DATEONLY },
+    endereco:        { type: DataTypes.STRING(255) },
 }, {
     tableName: 'cliente',
     freezeTableName: true,
@@ -40,7 +42,7 @@ function validarCamposObrigatorios(dados) {
 async function validarCpfUnico(cpf, idIgnorado = null) {
     const cpfNorm = normalizarCpf(cpf);
     const where = { cpf: cpfNorm };
-    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    if (idIgnorado) where.id_cliente = { [Op.ne]: idIgnorado };
     const existe = await Cliente.findOne({ where });
     if (existe) throw new Error('CPF já cadastrado');
 }
@@ -48,7 +50,7 @@ async function validarCpfUnico(cpf, idIgnorado = null) {
 async function validarEmailUnico(email, idIgnorado = null) {
     if (!email) return;
     const where = { email };
-    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    if (idIgnorado) where.id_cliente = { [Op.ne]: idIgnorado };
     const existe = await Cliente.findOne({ where });
     if (existe) throw new Error('E-mail já cadastrado');
 }
@@ -72,7 +74,7 @@ function isConsumidorFinal(id) {
 // ── Funções de dados ──────────────────────────────────────────────────────────
 
 async function listarTodos() {
-    return Cliente.findAll({ order: [['id', 'ASC']] });
+    return Cliente.findAll({ order: [['id_cliente', 'ASC']] });
 }
 
 async function buscarPorId(id) {
@@ -84,16 +86,18 @@ async function buscarPorCPF(cpf) {
 }
 
 async function buscarPorNome(nome) {
-    return Cliente.findAll({ where: { nome: { [Op.iLike]: `%${nome}%` } }, order: [['id', 'ASC']] });
+    return Cliente.findAll({ where: { nome: { [Op.iLike]: `%${nome}%` } }, order: [['id_cliente', 'ASC']] });
 }
 
 async function criar(dados) {
     await validarCliente(dados);
     return Cliente.create({
-        nome:     dados.nome,
-        cpf:      normalizarCpf(dados.cpf),
-        telefone: dados.telefone || null,
-        email:    dados.email || null,
+        nome:            dados.nome,
+        cpf:             normalizarCpf(dados.cpf),
+        telefone:        dados.telefone || null,
+        email:           dados.email || null,
+        data_nascimento: dados.data_nascimento || null,
+        endereco:        dados.endereco || null,
     });
 }
 
@@ -105,10 +109,12 @@ async function atualizar(id, dados) {
 
     await validarCliente(dados, id);
     await cliente.update({
-        nome:     dados.nome,
-        cpf:      normalizarCpf(dados.cpf),
-        telefone: dados.telefone || null,
-        email:    dados.email || null,
+        nome:            dados.nome,
+        cpf:             normalizarCpf(dados.cpf),
+        telefone:        dados.telefone || null,
+        email:           dados.email || null,
+        data_nascimento: dados.data_nascimento || null,
+        endereco:        dados.endereco || null,
     });
     return cliente;
 }

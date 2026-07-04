@@ -15,9 +15,9 @@ function validarQuantidade(quantidade) {
 }
 
 function validarEstoqueSuficiente(produto, quantidade) {
-    if (produto.quantidadeEstoque < quantidade) {
+    if (produto.quantidade_estoque < quantidade) {
         throw new Error(
-            `Estoque insuficiente. Disponível: ${produto.quantidadeEstoque}, solicitado: ${quantidade}`
+            `Estoque insuficiente. Disponível: ${produto.quantidade_estoque}, solicitado: ${quantidade}`
         );
     }
 }
@@ -30,7 +30,7 @@ async function entrada(produtoId, quantidade) {
     validarQuantidade(quantidade);
     const qtd = Number(quantidade);
     await ProdutoModel.atualizarParcial(produtoId, {
-        quantidadeEstoque: (await ProdutoModel.buscarPorId(produtoId)).quantidadeEstoque + qtd,
+        quantidade_estoque: (await ProdutoModel.buscarPorId(produtoId)).quantidade_estoque + qtd,
     });
     return ProdutoModel.buscarPorId(produtoId);
 }
@@ -42,7 +42,7 @@ async function saida(produtoId, quantidade) {
     const qtd = Number(quantidade);
     validarEstoqueSuficiente(produto, qtd);
     await ProdutoModel.atualizarParcial(produtoId, {
-        quantidadeEstoque: produto.quantidadeEstoque - qtd,
+        quantidade_estoque: produto.quantidade_estoque - qtd,
     });
     return ProdutoModel.buscarPorId(produtoId);
 }
@@ -51,18 +51,18 @@ async function saida(produtoId, quantidade) {
 async function verificarEstoqueMinimo(produtoId) {
     const produto = await validarProdutoExiste(produtoId);
     return {
-        produtoId: produto.id,
+        produtoId: produto.id_produto,
         nome: produto.nome,
-        quantidadeEstoque: produto.quantidadeEstoque,
-        estoqueMinimo: produto.estoqueMinimo,
-        abaixoDoMinimo: produto.quantidadeEstoque <= produto.estoqueMinimo,
+        quantidade_estoque: produto.quantidade_estoque,
+        estoque_minimo: produto.estoque_minimo,
+        abaixoDoMinimo: produto.quantidade_estoque <= produto.estoque_minimo,
     };
 }
 
 // Retorna todos os produtos com estoque igual ou abaixo do mínimo
 async function listarAbaixoDoMinimo() {
     const produtos = await ProdutoModel.listarTodos();
-    return produtos.filter(p => p.quantidadeEstoque <= p.estoqueMinimo);
+    return produtos.filter(p => p.quantidade_estoque <= p.estoque_minimo);
 }
 
 module.exports = { entrada, saida, verificarEstoqueMinimo, listarAbaixoDoMinimo };

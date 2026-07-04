@@ -1,10 +1,10 @@
 const sequelize = require('../../config/localConnection');
 const { DataTypes, Op } = require('sequelize');
- 
+
 const CATEGORIAS_VALIDAS = ['bebidas', 'alimentos', 'mercearia', 'outros'];
- 
-// ── Schema ──
- 
+
+// ── Helpers ──
+
 function normalizarCnpj(cnpj) {
     return cnpj.replace(/[.\-\/]/g, '');
 }
@@ -12,40 +12,40 @@ function normalizarCnpj(cnpj) {
 function normalizarCategoria(categoria) {
     return String(categoria || '').trim().toLowerCase();
 }
- 
+
 function validarFormatoCnpj(cnpj) {
     return /^(?:\d{14}|\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})$/.test(cnpj);
 }
- 
+
 function validarEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
- 
+
 function validarCamposObrigatorios(dados) {
-    const campos = ['razaoSocial', 'cnpj', 'telefone', 'email', 'cidade', 'categoriaProduto'];
+    const campos = ['razao_social', 'cnpj', 'telefone', 'email', 'categoria_produtos'];
     const ausentes = campos.filter(c => !dados[c]);
     if (ausentes.length > 0) {
         throw new Error(`Campos obrigatórios ausentes: ${ausentes.join(', ')}`);
     }
 }
- 
+
 function validarCategoria(categoria) {
-    const categoriaNormalizada = normalizarCategoria(categoria);
-    if (!CATEGORIAS_VALIDAS.includes(categoriaNormalizada)) {
+    const cat = normalizarCategoria(categoria);
+    if (!CATEGORIAS_VALIDAS.includes(cat)) {
         throw new Error(`Categoria inválida. Valores aceitos: ${CATEGORIAS_VALIDAS.join(', ')}`);
     }
 }
- 
-// ── Schema ────────────────────────────────────────────────────────────────────
+
+// ── Schema ──
 
 const Fornecedor = sequelize.define('Fornecedor', {
-    id:               { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    razaoSocial:      { type: DataTypes.STRING, allowNull: false },
-    cnpj:             { type: DataTypes.STRING(14), allowNull: false, unique: true },
-    telefone:         { type: DataTypes.STRING(20), allowNull: false },
-    email:            { type: DataTypes.STRING, allowNull: false },
-    cidade:           { type: DataTypes.STRING, allowNull: false },
-    categoriaProduto: { type: DataTypes.ENUM(...CATEGORIAS_VALIDAS), allowNull: false },
+    id_fornecedor:      { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    razao_social:       { type: DataTypes.STRING(150), allowNull: false },
+    cnpj:               { type: DataTypes.STRING(18), allowNull: false, unique: true },
+    telefone:           { type: DataTypes.STRING(20) },
+    email:              { type: DataTypes.STRING(100) },
+    endereco:           { type: DataTypes.STRING(255) },
+    categoria_produtos: { type: DataTypes.STRING(100) },
 }, {
     tableName: 'fornecedor',
     freezeTableName: true,
@@ -55,7 +55,7 @@ const Fornecedor = sequelize.define('Fornecedor', {
 async function validarCnpjUnico(cnpj, idIgnorado = null) {
     const cnpjNorm = normalizarCnpj(cnpj);
     const where = { cnpj: cnpjNorm };
-    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    if (idIgnorado) where.id_fornecedor = { [Op.ne]: idIgnorado };
     const existe = await Fornecedor.findOne({ where });
     if (existe) throw new Error('CNPJ já cadastrado');
 }
@@ -63,7 +63,7 @@ async function validarCnpjUnico(cnpj, idIgnorado = null) {
 async function validarEmailUnico(email, idIgnorado = null) {
     if (!email) return;
     const where = { email };
-    if (idIgnorado) where.id = { [Op.ne]: idIgnorado };
+    if (idIgnorado) where.id_fornecedor = { [Op.ne]: idIgnorado };
     const existe = await Fornecedor.findOne({ where });
     if (existe) throw new Error('E-mail já cadastrado');
 }
@@ -76,15 +76,15 @@ async function validarFornecedor(dados, idIgnorado = null) {
     if (!validarEmail(dados.email)) {
         throw new Error('Formato de e-mail inválido');
     }
-    validarCategoria(dados.categoriaProduto);
+    validarCategoria(dados.categoria_produtos);
     await validarCnpjUnico(dados.cnpj, idIgnorado);
     await validarEmailUnico(dados.email, idIgnorado);
 }
- 
-// ── Funções de dados ──────────────────────────────────────────────────────────
+
+// ── Funções de dados ──
 
 async function listarTodos() {
-    return Fornecedor.findAll({ order: [['id', 'ASC']] });
+    return Fornecedor.findAll({ order: [['id_fornecedor', 'ASC']] });
 }
 
 async function buscarPorId(id) {
@@ -96,18 +96,18 @@ async function buscarPorCNPJ(cnpj) {
 }
 
 async function buscarPorNome(nome) {
-    return Fornecedor.findAll({ where: { razaoSocial: { [Op.iLike]: `%${nome}%` } } });
+    return Fornecedor.findAll({ where: { razao_social: { [Op.iLike]: `%${nome}%` } } });
 }
 
 async function criar(dados) {
     await validarFornecedor(dados);
     return Fornecedor.create({
-        razaoSocial:      dados.razaoSocial,
-        cnpj:             normalizarCnpj(dados.cnpj),
-        telefone:         dados.telefone,
-        email:            dados.email,
-        cidade:           dados.cidade,
-        categoriaProduto: normalizarCategoria(dados.categoriaProduto),
+        razao_social:       dados.razao_social,
+        cnpj:               normalizarCnpj(dados.cnpj),
+        telefone:           dados.telefone || null,
+        email:              dados.email,
+        endereco:           dados.endereco || null,
+        categoria_produtos: normalizarCategoria(dados.categoria_produtos),
     });
 }
 
@@ -117,12 +117,12 @@ async function atualizar(id, dados) {
     if (!fornecedor) return null;
     await validarFornecedor(dados, id);
     await fornecedor.update({
-        razaoSocial:      dados.razaoSocial,
-        cnpj:             normalizarCnpj(dados.cnpj),
-        telefone:         dados.telefone,
-        email:            dados.email,
-        cidade:           dados.cidade,
-        categoriaProduto: normalizarCategoria(dados.categoriaProduto),
+        razao_social:       dados.razao_social,
+        cnpj:               normalizarCnpj(dados.cnpj),
+        telefone:           dados.telefone || null,
+        email:              dados.email,
+        endereco:           dados.endereco || null,
+        categoria_produtos: normalizarCategoria(dados.categoria_produtos),
     });
     return fornecedor;
 }
@@ -141,9 +141,9 @@ async function atualizarParcial(id, dados) {
         if (!validarEmail(dados.email)) throw new Error('Formato de e-mail inválido');
         await validarEmailUnico(dados.email, id);
     }
-    if (dados.categoriaProduto) {
-        validarCategoria(dados.categoriaProduto);
-        dados = { ...dados, categoriaProduto: normalizarCategoria(dados.categoriaProduto) };
+    if (dados.categoria_produtos) {
+        validarCategoria(dados.categoria_produtos);
+        dados = { ...dados, categoria_produtos: normalizarCategoria(dados.categoria_produtos) };
     }
 
     await fornecedor.update(dados);
@@ -157,4 +157,8 @@ async function remover(id) {
     return true;
 }
 
-module.exports = { Fornecedor, listarTodos, buscarPorId, buscarPorCNPJ, buscarPorNome, criar, atualizar, atualizarParcial, remover, CATEGORIAS_VALIDAS };
+module.exports = {
+    Fornecedor, CATEGORIAS_VALIDAS,
+    listarTodos, buscarPorId, buscarPorCNPJ, buscarPorNome,
+    criar, atualizar, atualizarParcial, remover,
+};

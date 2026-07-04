@@ -4,16 +4,13 @@
 module.exports = {
     async up(queryInterface, Sequelize) {
         await queryInterface.createTable('fornecedor', {
-            id:               { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
-            razaoSocial:      { type: Sequelize.STRING, allowNull: false },
-            cnpj:             { type: Sequelize.STRING(14), allowNull: false, unique: true },
-            telefone:         { type: Sequelize.STRING(20), allowNull: false },
-            email:            { type: Sequelize.STRING, allowNull: false },
-            cidade:           { type: Sequelize.STRING, allowNull: false },
-            categoriaProduto: {
-                type: Sequelize.ENUM('bebidas', 'alimentos', 'mercearia', 'outros'),
-                allowNull: false,
-            },
+            id_fornecedor:      { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
+            razao_social:       { type: Sequelize.STRING(150), allowNull: false },
+            cnpj:               { type: Sequelize.STRING(18), allowNull: false, unique: true },
+            telefone:           { type: Sequelize.STRING(20) },
+            email:              { type: Sequelize.STRING(100) },
+            endereco:           { type: Sequelize.STRING(255) },
+            categoria_produtos: { type: Sequelize.STRING(100) },
         });
     },
     async down(queryInterface) {

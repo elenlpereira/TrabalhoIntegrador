@@ -1,97 +1,130 @@
-const FORMAS_QUITACAO  = ['dinheiro', 'pix', 'debito', 'credito'];
-const STATUS = { ABERTA: 'aberta', QUITADA: 'quitada' };
+const sequelize = require('../../config/localConnection');
+const { DataTypes, Op } = require('sequelize');
+const ClienteModel = require('./clienteModel');
+const LogModel     = require('./logModel');
+const { CONSUMIDOR_FINAL_ID } = require('./clienteModel');
 
-let fichas = [];
+const STATUS_DIVIDA = { PENDENTE: 'pendente', PAGO_PARCIAL: 'pago_parcial', PAGO: 'pago' };
 
-// ── Validações ────────────────────────────────────────────────────────────────
+// ── Schema ──
 
-function arredondar(valor) {
-    return Math.round(valor * 100) / 100;
+const Divida = sequelize.define('Divida', {
+    id_divida:  { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    fk_cliente: { type: DataTypes.INTEGER, allowNull: false },
+    fk_comanda: { type: DataTypes.INTEGER },
+    debito:     { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    credito:    { type: DataTypes.DECIMAL(10, 2), allowNull: false, defaultValue: 0 },
+    saldo:      { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    data:       { type: DataTypes.DATEONLY, allowNull: false },
+    status:     { type: DataTypes.STRING(20), allowNull: false, defaultValue: STATUS_DIVIDA.PENDENTE },
+}, {
+    tableName: 'divida',
+    freezeTableName: true,
+    timestamps: false,
+});
+
+// ── Validações ──
+
+async function validarClienteExiste(clienteId) {
+    const cliente = await ClienteModel.buscarPorId(clienteId);
+    if (!cliente) throw new Error(`Cliente com id ${clienteId} não encontrado`);
+    return cliente;
 }
 
-// ── Funções internas ──────────────────────────────────────────────────────────
-
-function buscarOuCriarFicha(clienteId) {
-    let ficha = fichas.find(f => f.clienteId === clienteId);
-    if (!ficha) {
-        ficha = {
-            clienteId,
-            status:       STATUS.ABERTA,
-            saldoDevedor: 0,
-            debitos:      [],
-            pagamentos:   [],
-        };
-        fichas.push(ficha);
+function validarClienteReal(clienteId) {
+    if (Number(clienteId) === CONSUMIDOR_FINAL_ID) {
+        throw new Error('Consumidor Final não pode ter dívida registrada');
     }
-    return ficha;
 }
 
-// ── Funções de dados ──────────────────────────────────────────────────────────
+// ── Funções de dados ──
 
-function listarTodos(filtros = {}) {
-    let resultado = [...fichas];
-    if (filtros.status) {
-        resultado = resultado.filter(f => f.status === filtros.status);
-    }
-    return resultado;
+async function criar({ fk_cliente, fk_comanda = null, debito }) {
+    await validarClienteExiste(fk_cliente);
+    validarClienteReal(fk_cliente);
+    if (Number(debito) <= 0) throw new Error('O valor do débito deve ser maior que zero');
+    return Divida.create({
+        fk_cliente: Number(fk_cliente),
+        fk_comanda: fk_comanda ? Number(fk_comanda) : null,
+        debito:     Number(debito),
+        credito:    0,
+        saldo:      Number(debito),
+        data:       new Date().toISOString().slice(0, 10),
+        status:     STATUS_DIVIDA.PENDENTE,
+    });
 }
 
-function buscarPorCliente(clienteId) {
-    return fichas.find(f => f.clienteId === Number(clienteId)) || null;
+async function listarTodos(filtros = {}) {
+    const where = {};
+    if (filtros.status) where.status = filtros.status;
+    return Divida.findAll({ where, order: [['data', 'ASC'], ['id_divida', 'ASC']] });
 }
 
-// Chamado pelo pagamentoModel quando há lançamento com forma 'prazo'
-function registrarDebito(clienteId, comandaId, valor) {
-    const ficha = buscarOuCriarFicha(Number(clienteId));
+async function listarPorCliente(clienteId) {
+    return Divida.findAll({
+        where: { fk_cliente: Number(clienteId) },
+        order: [['data', 'ASC'], ['id_divida', 'ASC']],
+    });
+}
 
-    ficha.debitos.push({
-        comandaId:    Number(comandaId),
-        valor:        arredondar(Number(valor)),
-        adicionadoEm: new Date().toISOString(),
+async function buscarPorId(id) {
+    return Divida.findByPk(id);
+}
+
+async function totalDevidoPorCliente(clienteId) {
+    const result = await Divida.findAll({
+        attributes: [[sequelize.fn('SUM', sequelize.col('saldo')), 'total']],
+        where: {
+            fk_cliente: Number(clienteId),
+            status: { [Op.ne]: STATUS_DIVIDA.PAGO },
+        },
+        raw: true,
+    });
+    return Number(result[0]?.total || 0);
+}
+
+// RF14 / RF15 — quitacao parcial ou total: aplica o valor as dividas mais antigas primeiro (FIFO)
+async function quitar(clienteId, { valor, fk_usuario }) {
+    await validarClienteExiste(clienteId);
+    if (!valor || Number(valor) <= 0) throw new Error('O valor do pagamento deve ser maior que zero');
+
+    const pendentes = await Divida.findAll({
+        where: {
+            fk_cliente: Number(clienteId),
+            status: { [Op.in]: [STATUS_DIVIDA.PENDENTE, STATUS_DIVIDA.PAGO_PARCIAL] },
+        },
+        order: [['data', 'ASC'], ['id_divida', 'ASC']],
     });
 
-    ficha.saldoDevedor = arredondar(ficha.saldoDevedor + Number(valor));
+    if (pendentes.length === 0) throw new Error('Cliente nao possui dividas pendentes');
 
-    if (ficha.status === STATUS.QUITADA) {
-        ficha.status = STATUS.ABERTA;
+    let restante = Number(valor);
+
+    for (const divida of pendentes) {
+        if (restante <= 0) break;
+        const pagamento   = Math.min(restante, Number(divida.saldo));
+        const novoCredito = Number(divida.credito) + pagamento;
+        const novoSaldo   = Number(divida.debito)  - novoCredito;
+        const novoStatus  = novoSaldo <= 0 ? STATUS_DIVIDA.PAGO : STATUS_DIVIDA.PAGO_PARCIAL;
+        await divida.update({ credito: novoCredito, saldo: novoSaldo, status: novoStatus });
+        restante -= pagamento;
     }
 
-    return ficha;
+    const valorPago = Number(valor) - Math.max(restante, 0);
+    const troco     = Math.max(restante, 0);
+
+    if (fk_usuario) {
+        await LogModel.registrar({
+            fk_usuario: Number(fk_usuario),
+            tipo: 'quitar_ficha',
+            descricao: `Quitacao R$ ${valorPago.toFixed(2)} na ficha do cliente ${clienteId}`,
+        });
+    }
+
+    return { valor_pago: valorPago, troco, saldo_restante: await totalDevidoPorCliente(clienteId) };
 }
 
-// Abate um valor da ficha — pode ser parcial
-function quitar(clienteId, dados) {
-    const ficha = buscarPorCliente(Number(clienteId));
-    if (!ficha) return null;
-
-    if (ficha.saldoDevedor <= 0) {
-        throw new Error('Esta ficha não possui saldo devedor');
-    }
-
-    const valor = Number(dados.valor);
-    if (isNaN(valor) || valor <= 0) {
-        throw new Error('O valor deve ser maior que zero');
-    }
-
-    if (!FORMAS_QUITACAO.includes(dados.forma)) {
-        throw new Error(`Forma inválida "${dados.forma}". Aceitas: ${FORMAS_QUITACAO.join(', ')}`);
-    }
-
-    const valorAbatido = arredondar(Math.min(valor, ficha.saldoDevedor));
-
-    ficha.pagamentos.push({
-        valor:  valorAbatido,
-        forma:  dados.forma,
-        pagoEm: new Date().toISOString(),
-    });
-
-    ficha.saldoDevedor = arredondar(ficha.saldoDevedor - valorAbatido);
-
-    if (ficha.saldoDevedor === 0) {
-        ficha.status = STATUS.QUITADA;
-    }
-
-    return ficha;
-}
-
-module.exports = { listarTodos, buscarPorCliente, registrarDebito, quitar, STATUS, FORMAS_QUITACAO };
+module.exports = {
+    Divida, STATUS_DIVIDA,
+    criar, listarTodos, listarPorCliente, buscarPorId, totalDevidoPorCliente, quitar,
+};
