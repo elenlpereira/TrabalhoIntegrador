@@ -9,12 +9,14 @@ function Home() {
 
     const modulos = [
         { nome: 'Consumo',       caminho: '/consumo' },
-        { nome: 'Pagamento',     caminho: '/pagamento' },
         { nome: 'Estoque',       caminho: '/estoque' },
         { nome: 'Fornecedores',  caminho: '/fornecedores' },
         { nome: 'Clientes',      caminho: '/clientes' },
-        ...(isGerente ? [{ nome: 'Fornecedores', caminho: '/fornecedores' }] : []),
-        ...(isGerente ? [{ nome: 'Compras', caminho: '/compras' }] : []),
+        ...(isGerente ? [
+            { nome: 'Fornecedores', caminho: '/fornecedores' },
+            { nome: 'Usuários',     caminho: '/usuarios' },
+            { nome: 'Compra',       caminho: '/compras' },
+        ] : [])
     ]
 
     return (

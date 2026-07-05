@@ -1,47 +1,54 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import api from '../services/api'
+import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
+import api from '../services/api'
 
-// id=1 é o Consumidor Final — protegido no backend, ocultamos na lista
-const CONSUMIDOR_FINAL_ID = 1
+const BADGE = {
+    Gerente:   { backgroundColor: '#1a237e', color: '#fff' },
+    Atendente: { backgroundColor: '#e8f5e9', color: '#2d6a4f' },
+}
 
-function Clientes() {
+function Usuarios() {
     const navigate = useNavigate()
-    const [clientes, setClientes] = useState([])
+    const { usuario: eu } = useAuth()
+    const [usuarios, setUsuarios] = useState([])
     const [busca, setBusca] = useState('')
     const [erro, setErro] = useState(null)
     const [removendo, setRemovendo] = useState(null)
 
     useEffect(() => {
-        carregarClientes()
+        carregarUsuarios()
     }, [])
 
-    async function carregarClientes() {
+    async function carregarUsuarios() {
         try {
-            const res = await api.get('/clientes')
-            setClientes(res.data.clientes.filter(c => c.id_cliente !== CONSUMIDOR_FINAL_ID))
+            const res = await api.get('/usuarios')
+            setUsuarios(res.data.usuarios)
         } catch {
-            setErro('Erro ao carregar clientes')
+            setErro('Erro ao carregar usuários')
         }
     }
 
     async function remover(id) {
-        if (!window.confirm('Deseja remover este cliente?')) return
+        if (id === eu.id_usuario) {
+            return setErro('Não é possível remover o próprio usuário')
+        }
+        if (!window.confirm('Deseja remover este usuário?')) return
         setRemovendo(id)
         try {
-            await api.delete(`/clientes/${id}`)
-            setClientes(prev => prev.filter(c => c.id_cliente !== id))
+            await api.delete(`/usuarios/${id}`)
+            setUsuarios(prev => prev.filter(u => u.id_usuario !== id))
         } catch (e) {
-            setErro(e.response?.data?.erro || 'Erro ao remover cliente')
+            setErro(e.response?.data?.erro || 'Erro ao remover usuário')
         } finally {
             setRemovendo(null)
         }
     }
 
-    const clientesFiltrados = clientes.filter(c =>
-        c.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        (c.cpf || '').includes(busca)
+    const usuariosFiltrados = usuarios.filter(u =>
+        u.nome.toLowerCase().includes(busca.toLowerCase()) ||
+        u.email.toLowerCase().includes(busca.toLowerCase())
     )
 
     return (
@@ -50,17 +57,17 @@ function Clientes() {
 
             <div style={styles.body}>
                 <aside style={styles.sidebar}>
-                    <button style={styles.btnNovo} onClick={() => navigate('/clientes/novo')}>
-                        Novo cliente
+                    <button style={styles.btnNovo} onClick={() => navigate('/usuarios/novo')}>
+                        Novo usuário
                     </button>
                 </aside>
 
                 <main style={styles.main}>
-                    <p style={styles.tituloSecao}>Pesquisar clientes</p>
+                    <p style={styles.tituloSecao}>Pesquisar usuários</p>
                     <div style={styles.buscaRow}>
                         <input
                             style={styles.input}
-                            placeholder="Digite aqui"
+                            placeholder="Nome ou e-mail"
                             value={busca}
                             onChange={e => setBusca(e.target.value)}
                         />
@@ -71,37 +78,46 @@ function Clientes() {
                     <table style={styles.tabela}>
                         <thead>
                             <tr>
-                                <th style={styles.th}>Cliente</th>
-                                <th style={styles.th}>CPF</th>
-                                <th style={styles.th}>Telefone</th>
+                                <th style={styles.th}>Nome</th>
+                                <th style={styles.th}>E-mail</th>
+                                <th style={styles.th}>Perfil</th>
                                 <th style={styles.th}></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {clientesFiltrados.map(c => (
-                                <tr key={c.id_cliente}>
-                                    <td style={styles.td}>{c.nome}</td>
-                                    <td style={styles.td}>{formatarCpf(c.cpf)}</td>
-                                    <td style={styles.td}>{c.telefone || '—'}</td>
+                            {usuariosFiltrados.map(u => (
+                                <tr key={u.id_usuario} style={u.id_usuario === eu.id_usuario ? styles.trEu : {}}>
+                                    <td style={styles.td}>
+                                        {u.nome}
+                                        {u.id_usuario === eu.id_usuario && (
+                                            <span style={styles.tagEu}>você</span>
+                                        )}
+                                    </td>
+                                    <td style={styles.td}>{u.email}</td>
+                                    <td style={styles.td}>
+                                        <span style={{ ...styles.badge, ...BADGE[u.perfil_acesso] }}>
+                                            {u.perfil_acesso}
+                                        </span>
+                                    </td>
                                     <td style={styles.td}>
                                         <button
                                             style={styles.btnAcao}
-                                            onClick={() => navigate(`/clientes/${c.id_cliente}`)}
+                                            onClick={() => navigate(`/usuarios/${u.id_usuario}`)}
                                             title="Editar"
                                         >✏️</button>
                                         <button
-                                            style={styles.btnAcao}
-                                            onClick={() => remover(c.id_cliente)}
-                                            disabled={removendo === c.id_cliente}
+                                            style={{ ...styles.btnAcao, opacity: u.id_usuario === eu.id_usuario ? 0.3 : 1 }}
+                                            onClick={() => remover(u.id_usuario)}
+                                            disabled={removendo === u.id_usuario || u.id_usuario === eu.id_usuario}
                                             title="Remover"
                                         >🗑️</button>
                                     </td>
                                 </tr>
                             ))}
-                            {clientesFiltrados.length === 0 && (
+                            {usuariosFiltrados.length === 0 && (
                                 <tr>
                                     <td colSpan={4} style={{ ...styles.td, color: '#888', textAlign: 'center' }}>
-                                        Nenhum cliente encontrado
+                                        Nenhum usuário encontrado
                                     </td>
                                 </tr>
                             )}
@@ -113,20 +129,8 @@ function Clientes() {
     )
 }
 
-function formatarCpf(cpf) {
-    if (!cpf) return '—'
-    const s = cpf.replace(/\D/g, '')
-    if (s.length !== 11) return cpf
-    return `${s.slice(0, 3)}.${s.slice(3, 6)}.${s.slice(6, 9)}-${s.slice(9)}`
-}
-
 const styles = {
     container: { minHeight: '100vh', display: 'flex', flexDirection: 'column' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', backgroundColor: '#fff', borderBottom: '1px solid #ddd' },
-    logo: { fontWeight: 'bold', fontSize: '18px' },
-    headerRight: { display: 'flex', gap: '8px' },
-    btnVoltar: { backgroundColor: '#555', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' },
-    btnSair: { backgroundColor: '#e53935', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' },
     body: { display: 'flex', flex: 1 },
     sidebar: { width: '160px', backgroundColor: '#fff', borderRight: '1px solid #ddd', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' },
     btnNovo: { backgroundColor: '#2d6a4f', color: '#fff', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer' },
@@ -138,7 +142,10 @@ const styles = {
     tabela: { width: '100%', borderCollapse: 'collapse' },
     th: { textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #ddd', fontSize: '13px', color: '#555' },
     td: { padding: '10px 12px', borderBottom: '1px solid #eee', fontSize: '14px' },
+    trEu: { backgroundColor: '#f9fbe7' },
+    badge: { fontSize: '12px', padding: '2px 8px', borderRadius: '12px', fontWeight: '500' },
+    tagEu: { marginLeft: '8px', fontSize: '11px', backgroundColor: '#eee', color: '#555', padding: '1px 6px', borderRadius: '10px' },
     btnAcao: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' },
 }
 
-export default Clientes
+export default Usuarios

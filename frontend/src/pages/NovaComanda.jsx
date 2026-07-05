@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
+import Header from '../components/Header'
 
 function NovaComanda() {
     const navigate = useNavigate()
@@ -27,12 +28,7 @@ function NovaComanda() {
 
     return (
         <div style={s.container}>
-            <div style={s.topbar}>
-                <span style={s.tbName}>Bar Pereira</span>
-                <span style={s.tbSpacer} />
-                <button style={s.pillVoltar} onClick={() => navigate('/consumo')}>VOLTAR</button>
-                <button style={s.pillSair}>SAIR</button>
-            </div>
+            <Header voltarPara="/consumo" />
 
             <div style={s.breadcrumb}>
                 <span style={s.logoChip}>logo</span>

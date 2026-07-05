@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../services/api'
+import Header from '../components/Header'
 
 function EditarComanda() {
     const navigate = useNavigate()
@@ -104,12 +105,7 @@ function EditarComanda() {
 
     return (
         <div style={s.container}>
-            <div style={s.topbar}>
-                <span style={s.tbName}>Bar Pereira</span>
-                <span style={s.tbSpacer} />
-                <button style={s.pillVoltar} onClick={() => navigate('/consumo')}>VOLTAR</button>
-                <button style={s.pillSair}>SAIR</button>
-            </div>
+            <Header voltarPara="/consumo" />
 
             <div style={s.breadcrumb}>
                 <span style={s.logoChip}>logo</span>
