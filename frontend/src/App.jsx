@@ -12,6 +12,7 @@ import Clientes from './pages/Clientes'
 import Cliente from './pages/Cliente'
 import Fornecedores from './pages/Fornecedores'
 import Fornecedor from './pages/Fornecedor'
+import Compra from './pages/Compra'
 
 function App() {
   return (
@@ -36,6 +37,8 @@ function App() {
         <Route path="/fornecedores" element={<RotaProtegida apenasGerente><Fornecedores /></RotaProtegida>} />
         <Route path="/fornecedores/novo" element={<RotaProtegida apenasGerente><Fornecedor /></RotaProtegida>} />
         <Route path="/fornecedores/:id" element={<RotaProtegida apenasGerente><Fornecedor /></RotaProtegida>} />
+
+        <Route path="/compras/nova" element={<RotaProtegida apenasGerente><Compra /></RotaProtegida>} />
       </Routes>
     </AuthProvider>
   )

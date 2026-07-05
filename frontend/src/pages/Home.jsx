@@ -14,6 +14,7 @@ function Home() {
         { nome: 'Fornecedores',  caminho: '/fornecedores' },
         { nome: 'Clientes',      caminho: '/clientes' },
         ...(isGerente ? [{ nome: 'Fornecedores', caminho: '/fornecedores' }] : []),
+        ...(isGerente ? [{ nome: 'Compras', caminho: '/compras' }] : []),
     ]
 
     return (
