@@ -8,15 +8,13 @@ function Home() {
     const isGerente = usuario?.perfil_acesso === 'Gerente'
 
     const modulos = [
-        { nome: 'Consumo',       caminho: '/consumo' },
-        { nome: 'Estoque',       caminho: '/estoque' },
-        { nome: 'Fornecedores',  caminho: '/fornecedores' },
-        { nome: 'Clientes',      caminho: '/clientes' },
+        { nome: 'Consumo',  caminho: '/consumo' },
+        { nome: 'Clientes', caminho: '/clientes' },
+        { nome: 'Estoque',  caminho: '/estoque' },
         ...(isGerente ? [
             { nome: 'Fornecedores', caminho: '/fornecedores' },
             { nome: 'Usuários',     caminho: '/usuarios' },
-            { nome: 'Compra',       caminho: '/compras' },
-        ] : [])
+        ] : []),
     ]
 
     return (
