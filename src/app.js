@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 // Garante que todos os models Sequelize e suas associações são carregados
 // antes de qualquer requisição chegar
 require('./models/index');
@@ -15,6 +16,7 @@ const logRoutes        = require('./routes/logRoutes');
 const fichaRoutes      = require('./routes/fichaRoutes');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 app.use('/api/usuarios',      usuarioRoutes);
