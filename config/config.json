@@ -2,7 +2,7 @@
     "development": {
         "username": "postgres",
         "password": "postgres",
-        "database": "prog2",
+        "database": "sistema_bar",
         "host": "localhost",
         "port": 5432,
         "dialect": "postgres"

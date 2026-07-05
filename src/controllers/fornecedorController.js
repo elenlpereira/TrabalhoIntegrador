@@ -16,10 +16,8 @@ async function buscarID(req, res) {
 }
  
 async function buscarCNPJ(req, res) {
-    const cnpj = (req.params.cnpj || '').replace(/[.\-\/]/g, '');
-    if (!/^\d{14}$/.test(cnpj)) {
-        return res.status(RESP_HTTP.BAD_REQUEST).json({ erro: 'CNPJ inválido. Use 00000000000000 ou 00.000.000/0000-00' });
-    }
+    const cnpj = helper.obterCnpj(req, res);
+    if (cnpj === null) return;
     const fornecedor = await FornecedorModel.buscarPorCNPJ(cnpj);
     if (!fornecedor) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Fornecedor não encontrado' });
     res.status(RESP_HTTP.OK).json(fornecedor);

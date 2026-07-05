@@ -8,6 +8,7 @@ function Home() {
         { nome: 'Pagamento',     caminho: '/pagamento' },
         { nome: 'Estoque',       caminho: '/estoque' },
         { nome: 'Fornecedores',  caminho: '/fornecedores' },
+        { nome: 'Clientes',      caminho: '/clientes' },
     ]
 
     return (
