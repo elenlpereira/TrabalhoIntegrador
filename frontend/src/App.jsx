@@ -15,21 +15,29 @@ import Fornecedor from './pages/Fornecedor'
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/estoque" element={<Estoque />} />
-      <Route path="/estoque/novo" element={<Produto />} />
-      <Route path="/estoque/:id" element={<Produto />} />
-      <Route path="/consumo" element={<Consumo />} />
-      <Route path="/consumo/nova" element={<NovaComanda />} />
-      <Route path="/consumo/:id" element={<EditarComanda />} />
-      <Route path="/clientes" element={<Clientes />} />
-      <Route path="/clientes/novo" element={<Cliente />} />
-      <Route path="/clientes/:id" element={<Cliente />} />
-      <Route path="/fornecedores" element={<Fornecedores />} />
-      <Route path="/fornecedores/novo" element={<Fornecedor />} />
-      <Route path="/fornecedores/:id" element={<Fornecedor />} />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+
+        <Route path="/" element={<RotaProtegida><Home /></RotaProtegida>} />
+
+        <Route path="/estoque" element={<RotaProtegida><Estoque /></RotaProtegida>} />
+        <Route path="/estoque/novo" element={<RotaProtegida><Produto /></RotaProtegida>} />
+        <Route path="/estoque/:id" element={<RotaProtegida><Produto /></RotaProtegida>} />
+
+        <Route path="/consumo" element={<RotaProtegida><Consumo /></RotaProtegida>} />
+        <Route path="/consumo/nova" element={<RotaProtegida><NovaComanda /></RotaProtegida>} />
+        <Route path="/consumo/:id" element={<RotaProtegida><EditarComanda /></RotaProtegida>} />
+
+        <Route path="/clientes" element={<RotaProtegida><Clientes /></RotaProtegida>} />
+        <Route path="/clientes/novo" element={<RotaProtegida><Cliente /></RotaProtegida>} />
+        <Route path="/clientes/:id" element={<RotaProtegida><Cliente /></RotaProtegida>} />
+
+        <Route path="/fornecedores" element={<RotaProtegida apenasGerente><Fornecedores /></RotaProtegida>} />
+        <Route path="/fornecedores/novo" element={<RotaProtegida apenasGerente><Fornecedor /></RotaProtegida>} />
+        <Route path="/fornecedores/:id" element={<RotaProtegida apenasGerente><Fornecedor /></RotaProtegida>} />
+      </Routes>
+    </AuthProvider>
   )
 }
 
