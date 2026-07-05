@@ -1,10 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const RESP_HTTP = require('../consts');
+const autenticar = require('./middlewares/autenticar');
 // Garante que todos os models Sequelize e suas associações são carregados
 // antes de qualquer requisição chegar
 require('./models/index');
 
+const authRoutes      = require('./routes/authRoutes');
 const usuarioRoutes    = require('./routes/usuarioRoutes');
 const produtoRoutes    = require('./routes/produtoRoutes');
 const compraRoutes     = require('./routes/compraRoutes');
@@ -19,6 +21,12 @@ const fichaRoutes      = require('./routes/fichaRoutes');
 const app = express();
 app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
+
+// Rota pública — não exige token
+app.use('/api/auth', authRoutes);
+
+// Todas as rotas abaixo exigem token válido
+app.use(autenticar);
 
 app.use('/api/usuarios',      usuarioRoutes);
 app.use('/api/produtos',      produtoRoutes);

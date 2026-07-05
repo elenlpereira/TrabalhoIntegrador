@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../services/api'
+import Header from '../components/Header'
 
 const CATEGORIAS = ['bebidas', 'alimentos', 'mercearia', 'outros']
 
@@ -66,13 +67,7 @@ function Fornecedor() {
 
     return (
         <div style={styles.container}>
-            <header style={styles.header}>
-                <span style={styles.logo}>Bar Pereira</span>
-                <div style={styles.headerRight}>
-                    <button style={styles.btnVoltar} onClick={() => navigate('/fornecedores')}>Voltar</button>
-                    <button style={styles.btnSair}>Sair</button>
-                </div>
-            </header>
+            <Header voltarPara="/fornecedores" />
 
             <main style={styles.main}>
                 <nav style={styles.breadcrumb}>
@@ -146,11 +141,6 @@ function formatarCnpj(cnpj) {
 
 const styles = {
     container: { minHeight: '100vh', display: 'flex', flexDirection: 'column' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', backgroundColor: '#fff', borderBottom: '1px solid #ddd' },
-    logo: { fontWeight: 'bold', fontSize: '18px' },
-    headerRight: { display: 'flex', gap: '8px' },
-    btnVoltar: { backgroundColor: '#555', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' },
-    btnSair: { backgroundColor: '#e53935', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' },
     main: { flex: 1, padding: '24px' },
     breadcrumb: { marginBottom: '24px', fontSize: '14px', color: '#555' },
     link: { cursor: 'pointer', color: '#2d6a4f' },

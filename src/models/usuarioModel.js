@@ -73,6 +73,10 @@ async function buscarPorId(id) {
     return semSenha;
 }
 
+async function buscarPorEmail(email) {
+    return Usuario.findOne({ where: { email } });
+}
+
 async function criar(dados) {
     await validarUsuario(dados);
     const senhaHash = bcrypt.hashSync(dados.senha, 10);
@@ -130,4 +134,4 @@ async function remover(id) {
     return true;
 }
 
-module.exports = { Usuario, listarTodos, buscarPorId, criar, atualizar, atualizarParcial, remover };
+module.exports = { Usuario, listarTodos, buscarPorId, buscarPorEmail, criar, atualizar, atualizarParcial, remover };
