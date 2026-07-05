@@ -189,15 +189,41 @@ A interface sobe em `http://localhost:5173`.
 
 ## Rotas disponíveis
 
-| Prefixo               | Recurso      |
-|-----------------------|--------------|
-| `/api/usuarios`       | Usuários     |
-| `/api/clientes`       | Clientes     |
-| `/api/fornecedores`   | Fornecedores |
-| `/api/produtos`       | Produtos     |
-| `/api/compras`        | Compras      |
-| `/api/saidas`         | Saídas       |
-| `/api/comandas`       | Comandas     |
-| `/api/pagamentos`     | Pagamentos   |
-| `/api/ficha`          | Fichas       |
+### API — `http://localhost:3000`
+
+| Método | Rota | Acesso | Descrição |
+|--------|------|--------|-----------|
+| `POST` | `/api/auth/login` | Pública | Login — retorna JWT |
+| `GET` | `/api/usuarios` | Gerente | Listar usuários |
+| `POST` | `/api/usuarios` | Gerente | Criar usuário |
+| `PUT/PATCH` | `/api/usuarios/:id` | Gerente | Atualizar usuário |
+| `DELETE` | `/api/usuarios/:id` | Gerente | Remover usuário |
+| `GET/POST` | `/api/clientes` | Autenticado | Listar / criar clientes |
+| `PUT/PATCH/DELETE` | `/api/clientes/:id` | Autenticado | Editar / remover cliente |
+| `GET/POST` | `/api/fornecedores` | Autenticado | Listar fornecedores |
+| `POST/PUT/PATCH/DELETE` | `/api/fornecedores/:id` | Gerente | Criar / editar / remover fornecedor |
+| `GET/POST` | `/api/produtos` | Autenticado | Listar / criar produtos |
+| `PUT/PATCH/DELETE` | `/api/produtos/:id` | Autenticado | Editar / remover produto |
+| `GET/POST` | `/api/compras` | Gerente | Listar / registrar compras |
+| `DELETE` | `/api/compras/:id` | Gerente | Estornar compra |
+| `GET/POST` | `/api/comandas` | Autenticado | Listar / abrir comandas |
+| `GET/POST` | `/api/notas-fiscais` | Autenticado | Notas fiscais |
+| `GET` | `/api/logs` | Autenticado | Logs de auditoria |
+| `GET/POST` | `/api/fichas` | Autenticado | Fichas de clientes |
+
+### Frontend — `http://localhost:5173`
+
+| Rota | Acesso | Descrição |
+|------|--------|-----------|
+| `/login` | Pública | Tela de login |
+| `/` | Autenticado | Home — seleção de módulo |
+| `/clientes` | Autenticado | Listagem de clientes |
+| `/clientes/novo` | Autenticado | Cadastrar novo cliente |
+| `/clientes/:id` | Autenticado | Editar cliente |
+| `/estoque` | Autenticado | Listagem de produtos |
+| `/estoque/novo` | Autenticado | Cadastrar novo produto |
+| `/estoque/:id` | Autenticado | Editar produto |
+| `/fornecedores` | Gerente | Listagem de fornecedores |
+| `/fornecedores/novo` | Gerente | Cadastrar novo fornecedor |
+| `/fornecedores/:id` | Gerente | Editar fornecedor |
 

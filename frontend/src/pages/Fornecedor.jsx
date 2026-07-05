@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../services/api'
+import Header from '../components/Header'
 
 const CATEGORIAS = ['bebidas', 'alimentos', 'mercearia', 'outros']
 
@@ -66,6 +67,7 @@ function Fornecedor() {
 
     return (
         <div style={styles.container}>
+            <Header voltarPara="/fornecedores" />
             <header style={styles.header}>
                 <span style={styles.logo}>Bar Pereira</span>
                 <div style={styles.headerRight}>

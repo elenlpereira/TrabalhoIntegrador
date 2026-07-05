@@ -1,4 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
+import RotaProtegida from './components/RotaProtegida'
+import Login from './pages/Login'
 import Home from './pages/Home'
 import Estoque from './pages/Estoque'
 import Produto from './pages/Produto'

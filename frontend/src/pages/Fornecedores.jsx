@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
+import Header from '../components/Header'
 
 function Fornecedores() {
     const navigate = useNavigate()
@@ -47,6 +48,7 @@ function Fornecedores() {
 
     return (
         <div style={styles.container}>
+            <Header voltarPara="/" />
             <header style={styles.header}>
                 <span style={styles.logo}>Bar Pereira</span>
                 <div style={styles.headerRight}>

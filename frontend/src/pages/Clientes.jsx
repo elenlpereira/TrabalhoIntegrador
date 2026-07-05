@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
+import Header from '../components/Header'
 
 // id=1 é o Consumidor Final — protegido no backend, ocultamos na lista
 const CONSUMIDOR_FINAL_ID = 1
@@ -45,6 +46,7 @@ function Clientes() {
 
     return (
         <div style={styles.container}>
+            <Header voltarPara="/" />
             <header style={styles.header}>
                 <span style={styles.logo}>Bar Pereira</span>
                 <div style={styles.headerRight}>
