@@ -49,13 +49,6 @@ function Fornecedores() {
     return (
         <div style={styles.container}>
             <Header voltarPara="/" />
-            <header style={styles.header}>
-                <span style={styles.logo}>Bar Pereira</span>
-                <div style={styles.headerRight}>
-                    <button style={styles.btnVoltar} onClick={() => navigate('/')}>Voltar</button>
-                    <button style={styles.btnSair}>Sair</button>
-                </div>
-            </header>
 
             <div style={styles.body}>
                 <aside style={styles.sidebar}>

@@ -13,6 +13,8 @@ function Header({ voltarPara }) {
     return (
         <header style={styles.header}>
             <div style={styles.esquerda}>
+                <span style={styles.barName}>Bar Pereira</span>
+                <span style={styles.separador}>—</span>
                 <span style={styles.nome}>{usuario?.nome}</span>
                 {usuario?.perfil_acesso && (
                     <span style={styles.perfil}>{usuario.perfil_acesso}</span>
@@ -41,13 +43,11 @@ const styles = {
         backgroundColor: '#1a1a1a',
         color: '#fff',
     },
-    esquerda: { display: 'flex', alignItems: 'center', gap: '12px' },
-    nome: { fontWeight: '500', fontSize: '15px' },
-    perfil: {
-        backgroundColor: 'transparent',
-        color: '#aaa',
-        fontSize: '13px',
-    },
+    esquerda: { display: 'flex', alignItems: 'center', gap: '10px' },
+    barName: { fontWeight: 'bold', fontSize: '15px', color: '#fff' },
+    separador: { color: '#666', fontSize: '14px' },
+    nome: { fontWeight: '400', fontSize: '14px', color: '#ddd' },
+    perfil: { color: '#aaa', fontSize: '13px' },
     direita: { display: 'flex', gap: '8px' },
     btnVoltar: {
         backgroundColor: '#2d6a4f',

@@ -12,6 +12,8 @@ import Clientes from './pages/Clientes'
 import Cliente from './pages/Cliente'
 import Fornecedores from './pages/Fornecedores'
 import Fornecedor from './pages/Fornecedor'
+import Usuarios from './pages/Usuarios'
+import Usuario from './pages/Usuario'
 
 function App() {
   return (
@@ -36,6 +38,10 @@ function App() {
         <Route path="/fornecedores" element={<RotaProtegida apenasGerente><Fornecedores /></RotaProtegida>} />
         <Route path="/fornecedores/novo" element={<RotaProtegida apenasGerente><Fornecedor /></RotaProtegida>} />
         <Route path="/fornecedores/:id" element={<RotaProtegida apenasGerente><Fornecedor /></RotaProtegida>} />
+
+        <Route path="/usuarios" element={<RotaProtegida apenasGerente><Usuarios /></RotaProtegida>} />
+        <Route path="/usuarios/novo" element={<RotaProtegida apenasGerente><Usuario /></RotaProtegida>} />
+        <Route path="/usuarios/:id" element={<RotaProtegida apenasGerente><Usuario /></RotaProtegida>} />
       </Routes>
     </AuthProvider>
   )
