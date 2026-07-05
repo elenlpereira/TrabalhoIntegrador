@@ -48,8 +48,8 @@ function EditarComanda() {
     }
 
     function quantidadeNaComanda(produtoId) {
-        if (!comanda?.Consumos) return 0
-        const item = comanda.Consumos.find(c => c.id_produto === produtoId)
+        if (!comanda?.consumos) return 0
+        const item = comanda.consumos.find(c => c.fk_produto === produtoId)
         return item ? item.quantidade : 0
     }
 
@@ -59,14 +59,14 @@ function EditarComanda() {
         if (novaQtd < 0) return
 
         try {
-            const consumoExistente = comanda.Consumos?.find(c => c.id_produto === produto.id_produto)
+            const consumoExistente = comanda.consumos?.find(c => c.fk_produto === produto.id_produto)
 
             if (novaQtd === 0 && consumoExistente) {
                 await api.delete(`/comandas/${comanda.id_comanda}/consumos/${consumoExistente.id_consumo}`)
             } else if (consumoExistente) {
                 await api.patch(`/comandas/${comanda.id_comanda}/consumos/${consumoExistente.id_consumo}`, { quantidade: novaQtd })
             } else {
-                await api.post(`/comandas/${comanda.id_comanda}/consumos`, { id_produto: produto.id_produto, quantidade: novaQtd })
+                await api.post(`/comandas/${comanda.id_comanda}/consumos`, { fk_produto: produto.id_produto, quantidade: novaQtd })
             }
             await carregarComanda()
         } catch (e) {
