@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const RESP_HTTP = require('../consts');
 // Garante que todos os models Sequelize e suas associações são carregados
 // antes de qualquer requisição chegar
 require('./models/index');
@@ -16,7 +17,7 @@ const logRoutes        = require('./routes/logRoutes');
 const fichaRoutes      = require('./routes/fichaRoutes');
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
 
 app.use('/api/usuarios',      usuarioRoutes);
@@ -29,5 +30,12 @@ app.use('/api/consumos',      consumoRoutes);
 app.use('/api/notas-fiscais', notaFiscalRoutes);
 app.use('/api/logs',          logRoutes);
 app.use('/api/fichas',        fichaRoutes);
+
+// Middleware global de erro — captura qualquer erro não tratado nas rotas
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+    console.error(err);
+    res.status(RESP_HTTP.INTERNAL_SERVER_ERROR).json({ erro: 'Erro interno do servidor' });
+});
 
 module.exports = app;

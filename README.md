@@ -57,11 +57,20 @@ Possui todas as permissões do Atendente, além de:
 - Quitar fichas de clientes
 
 
-## Stack: 
-- **Sequelize**: ORM para mapeamento objeto-relacional e execução de queries.
+## Stack
+
+### Backend
+- **Node.js + Express 5**: servidor HTTP e roteamento.
+- **Sequelize 6**: ORM para mapeamento objeto-relacional e execução de queries.
 - **PostgreSQL**: banco de dados relacional.
 - **dotenv**: gerenciamento de variáveis de ambiente.
 - **bcryptjs**: hash de senhas de usuários.
+
+### Frontend
+- **React 19**: biblioteca de interface.
+- **Vite**: bundler e servidor de desenvolvimento.
+- **React Router DOM 7**: navegação entre páginas.
+- **Axios**: cliente HTTP para consumo da API.
 
 ## Estrutura do projeto
 
@@ -78,6 +87,15 @@ src/
     index.js           # carrega todos os models e define associações
     *.js               # cada model define o schema Sequelize e funções async
   routes/              # mapeamento de URL → controller
+frontend/
+  index.html           # ponto de entrada HTML
+  vite.config.js       # configuração do Vite
+  src/
+    main.jsx           # montagem do React
+    App.jsx            # rotas da aplicação
+    pages/             # componentes de página
+    services/
+      api.js           # instância Axios apontando para http://localhost:3000/api
 ```
 
 ## Pré-requisitos
@@ -105,7 +123,8 @@ cp .env.example .env
 ### 3. Criar o banco de dados no PostgreSQL
 
 ```bash
-createdb -U postgres sistema_bar
+createdb -U postgres sistema_bar 
+// sudo -u postgres psql -c "CREATE DATABASE sistema_bar;"
 # ou via psql:
 psql -U postgres -c "CREATE DATABASE sistema_bar;"
 ```
@@ -144,6 +163,8 @@ psql -h 127.0.0.1 -U postgres -d prog2
 
 ## Inicialização do servidor
 
+### Backend
+
 Iniciar em desenvolvimento (com reinicialização automática):
 
 ```bash
@@ -151,6 +172,20 @@ npm run dev
 ```
 
 O servidor sobe em `http://localhost:3000` (ou na porta definida em `PORT`).
+
+### Frontend
+
+Em outro terminal, a partir da raiz do projeto:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+A interface sobe em `http://localhost:5173`.
+
+> **Atenção:** o backend precisa estar rodando antes de abrir o frontend. O frontend consome a API em `http://localhost:3000/api` (configurado em `frontend/src/services/api.js`).
 
 ## Rotas disponíveis
 

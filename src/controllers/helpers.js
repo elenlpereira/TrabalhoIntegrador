@@ -26,5 +26,14 @@ function obterNome(req, res) {
     }
     return nome;
 }
+
+function obterCnpj(req, res) {
+    const cnpj = (req.params.cnpj || '').replace(/[.\-\/]/g, '');
+    if (!/^\d{14}$/.test(cnpj)) {
+        res.status(RESP_HTTP.BAD_REQUEST).json({ erro: 'CNPJ inválido. Use 00000000000000 ou 00.000.000/0000-00' });
+        return null;
+    }
+    return cnpj;
+}
  
-module.exports = { obterId, obterCpf, obterNome };
+module.exports = { obterId, obterCpf, obterCnpj, obterNome };
