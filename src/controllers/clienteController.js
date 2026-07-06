@@ -1,6 +1,10 @@
 const ClienteModel = require('../models/clienteModel');
+const LogModel = require('../models/logModel');
 const RESP_HTTP = require('../../consts');
 const helper = require('./helpers');
+
+const log = (req, tipo, descricao) =>
+    LogModel.registrar({ fk_usuario: req.usuario.id_usuario, tipo, descricao }).catch(() => {});
 
 async function listar(req, res) {
     const clientes = await ClienteModel.listarTodos();
@@ -33,6 +37,7 @@ async function buscarNome(req, res) {
 async function criar(req, res) {
     try {
         const novoCliente = await ClienteModel.criar(req.body);
+        log(req, 'cadastrar_cliente', `Cliente cadastrado: ${novoCliente.nome} (id ${novoCliente.id_cliente})`);
         res.status(RESP_HTTP.CREATED).set('Location', '/api/clientes/' + novoCliente.id_cliente).json(novoCliente);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
@@ -45,6 +50,7 @@ async function atualizar(req, res) {
     try {
         const cliente = await ClienteModel.atualizar(id, req.body);
         if (!cliente) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Cliente não encontrado' });
+        log(req, 'editar_cliente', `Cliente editado: ${cliente.nome} (id ${id})`);
         res.status(RESP_HTTP.OK).json(cliente);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
@@ -57,6 +63,7 @@ async function atualizarParcial(req, res) {
     try {
         const cliente = await ClienteModel.atualizarParcial(id, req.body);
         if (!cliente) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Cliente não encontrado' });
+        log(req, 'editar_cliente', `Cliente editado parcialmente: id ${id}`);
         res.status(RESP_HTTP.OK).json(cliente);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
@@ -69,6 +76,7 @@ async function remover(req, res) {
     try {
         const ok = await ClienteModel.remover(id);
         if (!ok) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Cliente não encontrado' });
+        log(req, 'remover_cliente', `Cliente removido: id ${id}`);
         res.status(RESP_HTTP.NO_CONTENT).send();
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });

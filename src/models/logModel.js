@@ -1,5 +1,5 @@
 const sequelize = require('../../config/localConnection');
-const { DataTypes } = require('sequelize');
+const { DataTypes, Op } = require('sequelize');
 
 // ── Schema ──
 
@@ -32,10 +32,30 @@ async function registrar({ fk_usuario, fk_comanda = null, fk_compra = null, tipo
 
 async function listarTodos(filtros = {}) {
     const where = {};
-    if (filtros.tipo)        where.tipo        = filtros.tipo;
-    if (filtros.fk_usuario)  where.fk_usuario  = Number(filtros.fk_usuario);
-    if (filtros.fk_comanda)  where.fk_comanda  = Number(filtros.fk_comanda);
-    return Log.findAll({ where, order: [['data_hora', 'DESC']] });
+    if (filtros.tipo) {
+        const tipos = filtros.tipo.split(',').map(t => t.trim()).filter(Boolean)
+        where.tipo = tipos.length === 1 ? tipos[0] : { [Op.in]: tipos }
+    }
+    if (filtros.fk_usuario) where.fk_usuario = Number(filtros.fk_usuario);
+    if (filtros.fk_comanda) where.fk_comanda = Number(filtros.fk_comanda);
+    if (filtros.data_inicio || filtros.data_fim) {
+        // Interpreta as datas no fuso UTC-3 (Brasil)
+        const inicio = filtros.data_inicio
+            ? new Date(filtros.data_inicio + 'T00:00:00-03:00')
+            : new Date('2000-01-01T00:00:00-03:00');
+        const fim = filtros.data_fim
+            ? new Date(filtros.data_fim + 'T23:59:59-03:00')
+            : new Date();
+        where.data_hora = { [Op.between]: [inicio, fim] };
+    }
+
+    // Importação lazy para evitar dependência circular
+    const { Usuario } = sequelize.models;
+    const include = Usuario
+        ? [{ model: Usuario, attributes: ['nome', 'perfil_acesso'], required: false }]
+        : [];
+
+    return Log.findAll({ where, include, order: [['data_hora', 'DESC']] });
 }
 
 async function buscarPorId(id) {

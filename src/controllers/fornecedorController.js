@@ -1,6 +1,10 @@
 const FornecedorModel = require('../models/fornecedorModel');
+const LogModel = require('../models/logModel');
 const RESP_HTTP = require('../../consts');
 const helper = require('./helpers');
+
+const log = (req, tipo, descricao) =>
+    LogModel.registrar({ fk_usuario: req.usuario.id_usuario, tipo, descricao }).catch(() => {});
  
 async function listar(req, res) {
     const fornecedores = await FornecedorModel.listarTodos();
@@ -37,6 +41,7 @@ function listarCategorias(req, res) {
 async function criar(req, res) {
     try {
         const novoFornecedor = await FornecedorModel.criar(req.body);
+        log(req, 'cadastrar_fornecedor', `Fornecedor cadastrado: ${novoFornecedor.razao_social} (id ${novoFornecedor.id_fornecedor})`);
         res.status(RESP_HTTP.CREATED).set('Location', '/api/fornecedores/' + novoFornecedor.id_fornecedor).json(novoFornecedor);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
@@ -49,6 +54,7 @@ async function atualizar(req, res) {
     try {
         const fornecedor = await FornecedorModel.atualizar(id, req.body);
         if (!fornecedor) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Fornecedor não encontrado' });
+        log(req, 'editar_fornecedor', `Fornecedor editado: ${fornecedor.razao_social} (id ${id})`);
         res.status(RESP_HTTP.OK).json(fornecedor);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
@@ -61,6 +67,7 @@ async function atualizarParcial(req, res) {
     try {
         const fornecedor = await FornecedorModel.atualizarParcial(id, req.body);
         if (!fornecedor) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Fornecedor não encontrado' });
+        log(req, 'editar_fornecedor', `Fornecedor editado parcialmente: id ${id}`);
         res.status(RESP_HTTP.OK).json(fornecedor);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
@@ -73,6 +80,7 @@ async function remover(req, res) {
     try {
         const ok = await FornecedorModel.remover(id);
         if (!ok) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Fornecedor não encontrado' });
+        log(req, 'remover_fornecedor', `Fornecedor removido: id ${id}`);
         res.status(RESP_HTTP.NO_CONTENT).send();
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });

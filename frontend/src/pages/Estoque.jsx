@@ -11,6 +11,7 @@ function Estoque() {
     const [busca, setBusca] = useState('')
     const [categoria, setCategoria] = useState('Todas')
     const [erro, setErro] = useState(null)
+    const [removendo, setRemovendo] = useState(null)
 
     useEffect(() => {
         carregarProdutos()
@@ -24,6 +25,19 @@ function Estoque() {
             setProdutos(res.data.produtos)
         } catch (e) {
             setErro('Erro ao carregar produtos')
+        }
+    }
+
+    async function removerProduto(id) {
+        if (!window.confirm('Deseja remover este produto do estoque?')) return
+        setRemovendo(id)
+        try {
+            await api.delete(`/produtos/${id}`)
+            setProdutos(prev => prev.filter(p => p.id_produto !== id))
+        } catch (e) {
+            setErro(e.response?.data?.erro || 'Erro ao remover produto')
+        } finally {
+            setRemovendo(null)
         }
     }
 
@@ -88,7 +102,12 @@ function Estoque() {
                                         <td style={styles.td}>R$ {Number(p.preco_venda).toFixed(2)}</td>
                                         <td style={styles.td}>
                                             <button style={styles.btnAcao} onClick={() => navigate(`/estoque/${p.id_produto}`)}>✏️</button>
-                                            <button style={styles.btnAcao}>🗑️</button>
+                                            <button
+                                                style={styles.btnAcao}
+                                                onClick={() => removerProduto(p.id_produto)}
+                                                disabled={removendo === p.id_produto}
+                                                title="Remover"
+                                            >🗑️</button>
                                         </td>
                                     </tr>
                                 )

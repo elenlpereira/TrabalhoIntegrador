@@ -144,7 +144,14 @@ async function remover(id) {
     if (isConsumidorFinal(id)) throw new Error('Consumidor Final não pode ser removido');
     const cliente = await Cliente.findByPk(id);
     if (!cliente) return false;
-    await cliente.destroy();
+    try {
+        await cliente.destroy();
+    } catch (err) {
+        if (err.name === 'SequelizeForeignKeyConstraintError') {
+            throw new Error('Este cliente possui comandas vinculadas e não pode ser removido');
+        }
+        throw err;
+    }
     return true;
 }
 

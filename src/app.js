@@ -17,6 +17,7 @@ const consumoRoutes    = require('./routes/consumoRoutes');
 const notaFiscalRoutes = require('./routes/notaFiscalRoutes');
 const logRoutes        = require('./routes/logRoutes');
 const fichaRoutes      = require('./routes/fichaRoutes');
+const dashboardRoutes  = require('./routes/dashboardRoutes');
 
 const app = express();
 app.use(cors({ origin: 'http://localhost:5173' }));
@@ -38,6 +39,7 @@ app.use('/api/consumos',      consumoRoutes);
 app.use('/api/notas-fiscais', notaFiscalRoutes);
 app.use('/api/logs',          logRoutes);
 app.use('/api/fichas',        fichaRoutes);
+app.use('/api/dashboard',     dashboardRoutes);
 
 // Middleware global de erro — captura qualquer erro não tratado nas rotas
 // eslint-disable-next-line no-unused-vars
