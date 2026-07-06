@@ -14,6 +14,7 @@ function Debitos() {
     const navigate = useNavigate()
 
     const [clientes,       setClientes]       = useState([])
+    const [busca,          setBusca]          = useState('')
     const [carregando,     setCarregando]      = useState(true)
     const [erro,           setErro]            = useState(null)
 
@@ -70,6 +71,16 @@ function Debitos() {
     }, [])
 
     useEffect(() => { carregarDebitos() }, [carregarDebitos])
+
+    // ── Filtro por nome ou id ───────────────────────────────────────────────
+    const clientesFiltrados = clientes.filter(c => {
+        if (!busca.trim()) return true
+        const termo = busca.toLowerCase()
+        return (
+            c.nome.toLowerCase().includes(termo) ||
+            String(c.id_cliente).includes(termo)
+        )
+    })
 
     // ── Abre detalhe de um cliente ──────────────────────────────────────────
     async function abrirCliente(cliente) {
@@ -175,14 +186,28 @@ function Debitos() {
                     </button>
                 </div>
 
+                <div style={s.buscaRow}>
+                    <input
+                        style={s.inputBusca}
+                        placeholder="Buscar por nome ou ID do cliente"
+                        value={busca}
+                        onChange={e => setBusca(e.target.value)}
+                    />
+                </div>
+
                 {erro && <p style={s.msgErro}>{erro}</p>}
 
                 {carregando ? (
                     <p style={s.muted}>Carregando...</p>
-                ) : clientes.length === 0 ? (
+                ) : clientesFiltrados.length === 0 ? (
                     <div style={s.vazio}>
-                        <span style={s.vazioBig}>✓</span>
-                        <p style={s.vazioTxt}>Nenhum cliente com débito pendente.</p>
+                        <span style={s.vazioBig}>{busca ? '🔍' : '✓'}</span>
+                        <p style={s.vazioTxt}>
+                            {busca
+                                ? `Nenhum cliente encontrado para "${busca}".`
+                                : 'Nenhum cliente com débito pendente.'
+                            }
+                        </p>
                     </div>
                 ) : (
                     <div style={s.listaWrap}>
@@ -190,7 +215,7 @@ function Debitos() {
                             <span>Cliente</span>
                             <span style={{ textAlign: 'right' }}>Saldo devedor</span>
                         </div>
-                        {clientes.map(c => (
+                        {clientesFiltrados.map(c => (
                             <div
                                 key={c.id_cliente}
                                 style={s.clienteRow}
@@ -201,6 +226,7 @@ function Debitos() {
                             >
                                 <div style={s.clienteInfo}>
                                     <span style={s.clienteNome}>{c.nome}</span>
+                                    <span style={s.clienteId}>#{c.id_cliente}</span>
                                 </div>
                                 <div style={s.clienteDir}>
                                     <span style={s.saldoValor}>R$ {c.saldo.toFixed(2)}</span>
@@ -221,7 +247,7 @@ function Debitos() {
                         <div style={s.modalHeader}>
                             <div>
                                 <h2 style={s.modalTitulo}>{clienteSel.nome}</h2>
-                                <p style={s.modalSubtitulo}>Ficha de débitos</p>
+                                <p style={s.modalSubtitulo}>#{clienteSel.id_cliente} · Ficha de débitos</p>
                             </div>
                             <button style={s.btnFechar} onClick={fecharModal} aria-label="Fechar">✕</button>
                         </div>
@@ -355,9 +381,11 @@ const s = {
     bcSep:        { color: '#aaa' },
     bcAtivo:      { color: '#222', fontWeight: 700 },
     main:         { flex: 1, padding: '24px 20px', maxWidth: 720, width: '100%', margin: '0 auto' },
-    topBar:       { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    topBar:       { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     titulo:       { fontSize: 20, fontWeight: 700, color: '#222', margin: 0 },
     btnAtualizar: { padding: '8px 18px', borderRadius: 6, border: '1px solid #ccc', background: '#fff', color: '#555', fontSize: 13, cursor: 'pointer', fontWeight: 600 },
+    buscaRow:     { marginBottom: 16 },
+    inputBusca:   { width: '100%', padding: '10px 14px', border: '1px solid #ddd', borderRadius: 6, fontSize: 14, boxSizing: 'border-box', background: '#fff' },
     msgErro:      { color: '#c0392b', background: '#fdecea', border: '1px solid #f5c6c2', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 14 },
     msgSucesso:   { color: '#155724', background: '#d4edda', border: '1px solid #c3e6cb', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 14 },
     muted:        { color: '#999', fontSize: 13 },
@@ -366,9 +394,10 @@ const s = {
     vazioTxt:     { fontSize: 15, color: '#888', margin: 0 },
     listaWrap:    { background: '#fff', border: '1px solid #e4e4e4', borderRadius: 8, overflow: 'hidden' },
     listaHeader:  { display: 'flex', justifyContent: 'space-between', padding: '10px 20px', background: '#f0f0f0', fontSize: 12, fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' },
-    clienteRow:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderTop: '1px solid #f0f0f0', cursor: 'pointer', transition: 'background 0.1s', ':hover': { background: '#fafafa' } },
+    clienteRow:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderTop: '1px solid #f0f0f0', cursor: 'pointer', transition: 'background 0.1s' },
     clienteInfo:  { display: 'flex', flexDirection: 'column', gap: 2 },
     clienteNome:  { fontSize: 14, fontWeight: 600, color: '#222' },
+    clienteId:    { fontSize: 11, color: '#aaa', fontFamily: 'monospace' },
     clienteDir:   { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 },
     saldoValor:   { fontSize: 16, fontWeight: 700, color: '#c0392b' },
     verDetalhes:  { fontSize: 12, color: '#3aa65b' },

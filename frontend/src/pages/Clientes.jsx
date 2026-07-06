@@ -43,7 +43,8 @@ function Clientes() {
 
     const clientesFiltrados = ordenar(clientes.filter(c =>
         c.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        (c.cpf || '').includes(busca)
+        (c.cpf || '').includes(busca) ||
+        String(c.id_cliente).includes(busca)
     ))
 
     return (
@@ -62,7 +63,7 @@ function Clientes() {
                     <div style={styles.buscaRow}>
                         <input
                             style={styles.input}
-                            placeholder="Pesquise por nome ou CPF"
+                            placeholder="Pesquise por nome, CPF ou ID"
                             value={busca}
                             onChange={e => setBusca(e.target.value)}
                         />
@@ -73,15 +74,17 @@ function Clientes() {
                     <table style={styles.tabela}>
                         <thead>
                             <tr>
-                                <Th label="Cliente"  col="nome"     coluna={coluna} direcao={direcao} onSort={alternar} />
-                                <Th label="CPF"      col="cpf"      coluna={coluna} direcao={direcao} onSort={alternar} />
-                                <Th label="Telefone" col="telefone" coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="#"        col="id_cliente" coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="Cliente"  col="nome"       coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="CPF"      col="cpf"        coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="Telefone" col="telefone"   coluna={coluna} direcao={direcao} onSort={alternar} />
                                 <th style={styles.th}></th>
                             </tr>
                         </thead>
                         <tbody>
                             {clientesFiltrados.map(c => (
                                 <tr key={c.id_cliente}>
+                                    <td style={{ ...styles.td, ...styles.tdId }}>{c.id_cliente}</td>
                                     <td style={styles.td}>{c.nome}</td>
                                     <td style={styles.td}>{formatarCpf(c.cpf)}</td>
                                     <td style={styles.td}>{c.telefone || '—'}</td>
@@ -102,7 +105,7 @@ function Clientes() {
                             ))}
                             {clientesFiltrados.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} style={{ ...styles.td, color: '#888', textAlign: 'center' }}>
+                                    <td colSpan={5} style={{ ...styles.td, color: '#888', textAlign: 'center' }}>
                                         Nenhum cliente encontrado
                                     </td>
                                 </tr>
@@ -140,6 +143,7 @@ const styles = {
     tabela: { width: '100%', borderCollapse: 'collapse' },
     th: { textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #ddd', fontSize: '13px', color: '#555' },
     td: { padding: '10px 12px', borderBottom: '1px solid #eee', fontSize: '14px' },
+    tdId: { color: '#aaa', fontSize: '12px', fontFamily: 'monospace' },
     btnAcao: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' },
 }
 
