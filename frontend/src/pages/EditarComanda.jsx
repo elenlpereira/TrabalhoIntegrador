@@ -106,6 +106,12 @@ function EditarComanda() {
     const nomeComanda = comanda?.identificacao || (comanda ? `#${comanda.id_comanda}` : '...')
     const comandaInativa = comanda && comanda.status !== 'aberta'
 
+    // Calcula o total somando quantidade × preço de venda de cada item na comanda
+    const totalComanda = (comanda?.consumos || []).reduce((soma, consumo) => {
+        const produto = produtos.find(p => p.id_produto === consumo.fk_produto)
+        return soma + (produto ? consumo.quantidade * parseFloat(produto.preco_venda) : 0)
+    }, 0)
+
     return (
         <div style={s.container}>
             <Header voltarPara={voltarPara} />
@@ -144,7 +150,9 @@ function EditarComanda() {
                             <thead>
                                 <tr>
                                     <th style={s.th}>Produto</th>
-                                    <th style={s.th}>Quantidade</th>
+                                    <th style={s.th}>Qtd.</th>
+                                    <th style={s.th}>Preço unit.</th>
+                                    <th style={s.th}>Subtotal</th>
                                     <th style={s.th}></th>
                                 </tr>
                             </thead>
@@ -155,6 +163,10 @@ function EditarComanda() {
                                         <tr key={p.id_produto} style={qtd > 0 ? s.trAtivo : {}}>
                                             <td style={s.td}>{p.nome}</td>
                                             <td style={s.td}>{qtd}</td>
+                                            <td style={s.td}>R$ {parseFloat(p.preco_venda).toFixed(2)}</td>
+                                            <td style={s.td}>
+                                                {qtd > 0 ? `R$ ${(qtd * parseFloat(p.preco_venda)).toFixed(2)}` : '—'}
+                                            </td>
                                             <td style={{ ...s.td, textAlign: 'right' }}>
                                                 <button style={s.iconBtn} onClick={() => alterarQuantidade(p, -1)}>−</button>
                                                 <button style={s.iconBtn} onClick={() => alterarQuantidade(p, +1)}>+</button>
@@ -164,6 +176,11 @@ function EditarComanda() {
                                 })}
                             </tbody>
                         </table>
+                    </div>
+
+                    <div style={s.totalRow}>
+                        <span style={s.totalLabel}>Total da comanda:</span>
+                        <span style={s.totalValor}>R$ {totalComanda.toFixed(2)}</span>
                     </div>
 
                     <div style={s.actionsRow}>
@@ -206,6 +223,9 @@ const s = {
     td: { padding: '9px 14px', borderTop: '1px solid #eee', color: '#333' },
     trAtivo: { background: '#eafaf1' },
     iconBtn: { border: 'none', background: 'none', color: '#3aa65b', cursor: 'pointer', fontSize: 18, fontWeight: 700, padding: '0 6px' },
+    totalRow:   { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '2px solid #e4e4e4', marginBottom: 12 },
+    totalLabel: { fontSize: 14, fontWeight: 600, color: '#555' },
+    totalValor: { fontSize: 16, fontWeight: 700, color: '#3aa65b' },
     actionsRow: { display: 'flex', justifyContent: 'flex-end', gap: 12 },
     btn: { display: 'inline-block', padding: '9px 24px', borderRadius: 16, fontWeight: 700, fontSize: 12, cursor: 'pointer', textDecoration: 'none', border: '1.5px solid #3aa65b', background: '#fff', color: '#3aa65b' },
     btnSolid: { background: '#3aa65b', color: '#fff' },
