@@ -8,6 +8,8 @@ function Consumo() {
     const [comandas, setComandas] = useState([])
     const [erro, setErro] = useState(null)
 
+    const [busca, setBusca] = useState('')
+
     useEffect(() => {
         carregarComandas()
     }, [])
@@ -37,25 +39,42 @@ function Consumo() {
             <div style={s.body}>
                 <aside style={s.sidebar}>
                     <button style={s.btnSolid} onClick={novaComanda}>Nova comanda</button>
+                    <input
+                        style={s.buscaInput}
+                        placeholder="Pesquise por nome ou #id"
+                        value={busca}
+                        onChange={e => setBusca(e.target.value)}
+                    />
                     <h4 style={s.sidebarTitle}>COMANDAS ATIVAS</h4>
                     <div style={s.comandaList}>
                         {erro && <p style={{ color: 'red', fontSize: 12 }}>{erro}</p>}
                         {comandas.length === 0 && !erro && (
                             <p style={s.muted}>Nenhuma comanda aberta</p>
                         )}
-                        {comandas.map(c => (
+                        {comandas
+                            .filter(c =>
+                                !busca ||
+                                (c.identificacao || '').toLowerCase().includes(busca.toLowerCase()) ||
+                                String(c.id_comanda).includes(busca.replace('#', ''))
+                            )
+                            .map(c => (
                             <button
                                 key={c.id_comanda}
                                 style={s.comandaItem}
                                 onClick={() => navigate(`/consumo/${c.id_comanda}`)}
                             >
                                 <span>
-                                    {c.identificacao || `#${c.id_comanda}`}
+                                    {c.identificacao
+                                        ? `${c.identificacao} (#${c.id_comanda})`
+                                        : `#${c.id_comanda}`}
                                 </span>
                                 <span style={s.editIcon}>✎</span>
                             </button>
                         ))}
                     </div>
+                    <button style={s.btnHistorico} onClick={() => navigate('/historico')}>
+                        Ver histórico de comandas
+                    </button>
                 </aside>
 
                 <main style={s.main}>
@@ -81,6 +100,8 @@ const s = {
     body: { flex: 1, display: 'flex' },
     sidebar: { width: 190, borderRight: '1px solid #e8e8e8', background: '#fafafa', padding: 16, display: 'flex', flexDirection: 'column', gap: 14 },
     btnSolid: { background: '#3aa65b', color: '#fff', border: 'none', borderRadius: 16, padding: '9px 24px', fontWeight: 700, fontSize: 12, cursor: 'pointer', textAlign: 'center' },
+    buscaInput: { padding: '6px 8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '12px', width: '100%', boxSizing: 'border-box', marginTop: '6px' },
+    btnHistorico: { marginTop: 'auto', background: '#f0f4ff', border: '1px solid #c5cae9', color: '#3949ab', cursor: 'pointer', fontSize: '12px', textAlign: 'center', padding: '8px 6px', borderRadius: '4px', fontWeight: '500' },
     sidebarTitle: { margin: 0, fontSize: 11, letterSpacing: 0.4, color: '#8a8a8a', textTransform: 'uppercase' },
     comandaList: { display: 'flex', flexDirection: 'column', gap: 6 },
     comandaItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', border: '1px solid #e6e6e6', borderRadius: 4, padding: '8px 10px', fontSize: 13, cursor: 'pointer', color: '#333', width: '100%', textAlign: 'left' },

@@ -13,10 +13,10 @@ function Home() {
         { nome: 'Clientes',  caminho: '/clientes' },
         { nome: 'Estoque',   caminho: '/estoque' },
         ...(isGerente ? [
+            { nome: 'Compras',      caminho: '/compras/nova' },
             { nome: 'Fornecedores', caminho: '/fornecedores' },
             { nome: 'Usuários',     caminho: '/usuarios' },
             { nome: 'Logs',         caminho: '/logs' },
-            { nome: 'Compras',      caminho: '/compras/nova' },
         ] : []),
     ]
 

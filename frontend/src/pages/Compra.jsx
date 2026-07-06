@@ -16,6 +16,8 @@ function Compra() {
     })
     const [produtos, setProdutos] = useState([])
     const [fornecedores, setFornecedores] = useState([])
+    const [buscaProduto, setBuscaProduto] = useState('')
+    const [buscaFornecedor, setBuscaFornecedor] = useState('')
     const [erro, setErro] = useState(null)
     const [salvando, setSalvando] = useState(false)
 
@@ -35,6 +37,8 @@ function Compra() {
         carregar()
     }, [])
 
+    const [confirmar, setConfirmar] = useState(false)
+
     function handleChange(e) {
         setForm({ ...form, [e.target.name]: e.target.value })
     }
@@ -42,9 +46,10 @@ function Compra() {
     async function handleSubmit() {
         setErro(null)
         setSalvando(true)
+        setConfirmar(false)
         try {
             await api.post('/compras', form)
-            navigate('/')
+            navigate('/estoque')
         } catch (e) {
             setErro(e.response?.data?.erro || 'Erro ao registrar compra')
         } finally {
@@ -73,7 +78,9 @@ function Compra() {
                             <select style={styles.input} name="fk_produto" value={form.fk_produto} onChange={handleChange}>
                                 <option value="">Selecione o produto</option>
                                 {produtos.map(p => (
-                                    <option key={p.id_produto} value={p.id_produto}>{p.nome}</option>
+                                    <option key={p.id_produto} value={p.id_produto}>
+                                        {p.nome} (estoque: {p.quantidade_estoque})
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -118,13 +125,32 @@ function Compra() {
                     {erro && <p style={styles.erro}>{erro}</p>}
 
                     <div style={styles.acoes}>
+                        <button style={styles.btnVerEstoque} onClick={() => navigate('/estoque')}>Ver estoque</button>
                         <button style={styles.btnCancelar} onClick={() => navigate('/')}>Cancelar</button>
-                        <button style={styles.btnConfirmar} onClick={handleSubmit} disabled={salvando}>
+                        <button style={styles.btnConfirmar} onClick={() => setConfirmar(true)} disabled={salvando}>
                             {salvando ? 'Registrando...' : 'Confirmar compra'}
                         </button>
                     </div>
                 </div>
             </main>
+
+            {confirmar && (
+                <div style={styles.overlay}>
+                    <div style={styles.modal}>
+                        <h3 style={styles.modalTitulo}>Confirmar compra</h3>
+                        <p style={styles.modalTexto}>
+                            Registrar entrada de <strong>{form.quantidade} unidade(s)</strong> no estoque?<br />
+                            Total estimado: <strong>R$ {totalEstimado}</strong>
+                        </p>
+                        <div style={styles.modalAcoes}>
+                            <button style={styles.btnCancelar} onClick={() => setConfirmar(false)}>Cancelar</button>
+                            <button style={styles.btnConfirmar} onClick={handleSubmit} disabled={salvando}>
+                                {salvando ? 'Registrando...' : 'Confirmar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
@@ -144,8 +170,14 @@ const styles = {
     totalValor: { fontSize: '18px', fontWeight: 'bold', color: '#2d6a4f' },
     erro: { color: '#e53935', fontSize: '14px', marginBottom: '12px' },
     acoes: { display: 'flex', justifyContent: 'flex-end', gap: '12px' },
+    btnVerEstoque: { backgroundColor: '#fff', border: '1px solid #2d6a4f', color: '#2d6a4f', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', marginRight: 'auto' },
     btnCancelar: { backgroundColor: '#fff', border: '1px solid #ddd', padding: '8px 20px', borderRadius: '4px', cursor: 'pointer' },
     btnConfirmar: { backgroundColor: '#2d6a4f', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: '4px', cursor: 'pointer' },
+    overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+    modal: { backgroundColor: '#fff', borderRadius: '8px', padding: '28px 32px', maxWidth: '400px', width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' },
+    modalTitulo: { fontSize: '16px', fontWeight: '600', marginBottom: '12px' },
+    modalTexto: { fontSize: '14px', color: '#444', marginBottom: '20px', lineHeight: '1.6' },
+    modalAcoes: { display: 'flex', justifyContent: 'flex-end', gap: '12px' },
 }
 
 export default Compra

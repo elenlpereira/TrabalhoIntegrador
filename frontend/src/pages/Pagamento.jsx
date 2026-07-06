@@ -59,10 +59,12 @@ function Pagamento() {
     const isConsumidorFinal = comanda?.fk_cliente === CONSUMIDOR_FINAL_ID
     const formasDisponiveis = [...FORMAS_VISTA, 'ficha']
     const tentouPrazoSemCliente = formaPagamento === 'ficha' && isConsumidorFinal
+    const [confirmar, setConfirmar] = useState(false)
 
     async function handleConfirmar() {
         setErro(null)
         setSalvando(true)
+        setConfirmar(false)
         try {
             await api.post(`/comandas/${id}/fechar`, {
                 forma_pagamento: formaPagamento,
@@ -122,10 +124,10 @@ function Pagamento() {
                                     )}
                                     {itens.map(item => (
                                         <tr key={item.id_consumo}>
-                                            <td style={s.td}>{item.Produto?.nome || `Produto #${item.fk_produto}`}</td>
+                                            <td style={s.td}>{item.produto?.nome || `Produto #${item.fk_produto}`}</td>
                                             <td style={s.td}>{item.quantidade}</td>
-                                            <td style={s.td}>R$ {Number(item.Produto?.preco_venda || 0).toFixed(2)}</td>
-                                            <td style={s.td}>R$ {(item.quantidade * Number(item.Produto?.preco_venda || 0)).toFixed(2)}</td>
+                                            <td style={s.td}>R$ {Number(item.produto?.preco_venda || 0).toFixed(2)}</td>
+                                            <td style={s.td}>R$ {(item.quantidade * Number(item.produto?.preco_venda || 0)).toFixed(2)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -203,13 +205,36 @@ function Pagamento() {
                     </button>
                     <button
                         style={{ ...s.btn, ...s.btnSolid, opacity: salvando ? 0.7 : 1 }}
-                        onClick={handleConfirmar}
+                        onClick={() => setConfirmar(true)}
                         disabled={salvando || itens.length === 0 || tentouPrazoSemCliente}
                     >
                         {salvando ? 'Registrando...' : 'Confirmar pagamento'}
                     </button>
                 </div>
             </main>
+
+            {confirmar && (
+                <div style={s.overlay}>
+                    <div style={s.modal}>
+                        <h3 style={s.modalTitulo}>Confirmar pagamento</h3>
+                        <p style={s.modalTexto}>
+                            Fechar comanda com pagamento via <strong>{formaPagamento}</strong>?<br />
+                            Total: <strong>R$ {Number(comanda?.valor_total || 0).toFixed(2)}</strong>
+                        </p>
+                        {tentouPrazoSemCliente && (
+                            <p style={{ color: '#e53935', fontSize: 13, marginBottom: 12 }}>
+                                Vincule um cliente antes de confirmar pagamento por ficha.
+                            </p>
+                        )}
+                        <div style={s.modalAcoes}>
+                            <button style={s.btnCancelar} onClick={() => setConfirmar(false)}>Cancelar</button>
+                            <button style={{ ...s.btn, ...s.btnSolid }} onClick={handleConfirmar} disabled={salvando}>
+                                {salvando ? 'Registrando...' : 'Confirmar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <footer style={s.footer}>
                 <a href="#" style={s.footerLink}>Contate-nos</a>
@@ -220,6 +245,11 @@ function Pagamento() {
 
 const s = {
     page:            { minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f5f5f5' },
+    overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+    modal: { backgroundColor: '#fff', borderRadius: '8px', padding: '28px 32px', maxWidth: '380px', width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' },
+    modalTitulo: { fontSize: '16px', fontWeight: '600', marginBottom: '12px' },
+    modalTexto: { fontSize: '14px', color: '#444', marginBottom: '20px', lineHeight: '1.6' },
+    modalAcoes: { display: 'flex', justifyContent: 'flex-end', gap: '12px' },
     breadcrumb:      { background: '#ececec', borderBottom: '1px solid #d8d8d8', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 20px', fontSize: 13 },
     breadcrumbItem:  { color: '#777', cursor: 'pointer' },
     breadcrumbSep:   { color: '#aaa' },
