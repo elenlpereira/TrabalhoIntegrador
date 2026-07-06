@@ -11,6 +11,10 @@ async function listar(req, res) {
     res.status(RESP_HTTP.OK).json({ total: produtos.length, produtos });
 }
 
+function listarCategorias(req, res) {
+    res.status(RESP_HTTP.OK).json({ categorias: ProdutoModel.CATEGORIAS_VALIDAS });
+}
+
 async function buscar(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
@@ -68,4 +72,4 @@ async function remover(req, res) {
     }
 }
 
-module.exports = { listar, buscar, criar, atualizar, atualizarParcial, remover };
+module.exports = { listar, listarCategorias, buscar, criar, atualizar, atualizarParcial, remover };

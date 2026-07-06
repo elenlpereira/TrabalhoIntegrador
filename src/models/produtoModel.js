@@ -131,4 +131,4 @@ async function remover(id) {
     return true;
 }
 
-module.exports = { Produto, listarTodos, buscarPorId, criar, atualizar, atualizarParcial, remover };
+module.exports = { Produto, CATEGORIAS_VALIDAS, listarTodos, buscarPorId, criar, atualizar, atualizarParcial, remover };
