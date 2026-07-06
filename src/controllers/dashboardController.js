@@ -117,16 +117,16 @@ async function analise(req, res) {
             type: QueryTypes.SELECT,
         }),
 
-        // 4. Clientes com comandas a receber (fiado)
+        // 4. Clientes com fiado — usa saldo real da tabela divida
         sequelize.query(`
             SELECT
                 cl.id_cliente,
                 cl.nome,
-                COUNT(co.id_comanda)   AS total_comandas,
-                SUM(co.valor_total)    AS total_a_receber
+                COUNT(d.id_divida)   AS total_dividas,
+                SUM(d.saldo)         AS total_a_receber
             FROM cliente cl
-            JOIN comanda co ON cl.id_cliente = co.fk_cliente
-            WHERE co.status = 'a receber'
+            JOIN divida d ON cl.id_cliente = d.fk_cliente
+            WHERE d.status IN ('pendente', 'pago_parcial')
             GROUP BY cl.id_cliente, cl.nome
             ORDER BY total_a_receber DESC
         `, { type: QueryTypes.SELECT }),

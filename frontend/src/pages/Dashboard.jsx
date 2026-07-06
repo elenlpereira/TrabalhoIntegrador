@@ -250,14 +250,14 @@ function Dashboard() {
                             <table style={s.tabela}>
                                 <thead><tr>
                                     <th style={s.th}>Cliente</th>
-                                    <th style={s.th}>Comandas</th>
+                                    <th style={s.th}>Débitos</th>
                                     <th style={s.th}>Total a receber</th>
                                 </tr></thead>
                                 <tbody>
                                     {analise.clientes_fiado.map(cf => (
                                         <tr key={cf.id_cliente} style={s.tr}>
                                             <td style={s.td}>{cf.nome}</td>
-                                            <td style={s.td}>{cf.total_comandas}</td>
+                                            <td style={s.td}>{cf.total_dividas}</td>
                                             <td style={{ ...s.td, fontWeight: 600, color: '#c62828' }}>R$ {Number(cf.total_a_receber).toFixed(2)}</td>
                                         </tr>
                                     ))}

@@ -16,6 +16,7 @@ function Pagamento() {
     const [salvando,      setSalvando]      = useState(false)
     const [clientes,      setClientes]      = useState([])
     const [buscaCliente,  setBuscaCliente]  = useState('')
+    const [clienteSelecionado, setClienteSelecionado] = useState(null)
     const [vinculando,    setVinculando]    = useState(false)
 
     useEffect(() => {
@@ -25,7 +26,7 @@ function Pagamento() {
     async function buscarClientes(termo) {
         if (!termo || termo.length < 2) { setClientes([]); return }
         try {
-            const res = await api.get('/clientes', { params: { nome: termo } })
+            const res = await api.get('/clientes/busca', { params: { nome: termo } })
             // filtra consumidor final
             setClientes((res.data.clientes || []).filter(c => c.id_cliente !== CONSUMIDOR_FINAL_ID))
         } catch {
@@ -39,6 +40,7 @@ function Pagamento() {
             await api.patch(`/comandas/${id}`, { fk_cliente: cliente.id_cliente })
             setBuscaCliente('')
             setClientes([])
+            setClienteSelecionado(cliente)
             await carregarComanda()
         } catch (e) {
             setErro(e.response?.data?.erro || 'Erro ao vincular cliente.')
@@ -50,15 +52,28 @@ function Pagamento() {
     async function carregarComanda() {
         try {
             const res = await api.get(`/comandas/${id}`)
-            setComanda(res.data)
+            const c = res.data
+            setComanda(c)
+            // Se já há um cliente vinculado (não é consumidor final), carrega seus dados
+            if (c.fk_cliente && c.fk_cliente !== CONSUMIDOR_FINAL_ID) {
+                try {
+                    const rc = await api.get(`/clientes/${c.fk_cliente}`)
+                    setClienteSelecionado(rc.data)
+                } catch {
+                    setClienteSelecionado(null)
+                }
+            } else {
+                setClienteSelecionado(null)
+            }
         } catch {
             setErro('Erro ao carregar comanda. Verifique a conexão com o servidor.')
         }
     }
 
-    const isConsumidorFinal = comanda?.fk_cliente === CONSUMIDOR_FINAL_ID
+    const isConsumidorFinal = comanda?.fk_cliente === CONSUMIDOR_FINAL_ID || !comanda?.fk_cliente
     const formasDisponiveis = [...FORMAS_VISTA, 'ficha']
-    const tentouPrazoSemCliente = formaPagamento === 'ficha' && isConsumidorFinal
+    const ehFicha = formaPagamento === 'ficha'
+    const tentouPrazoSemCliente = ehFicha && (!clienteSelecionado || isConsumidorFinal)
     const [confirmar, setConfirmar] = useState(false)
 
     async function handleConfirmar() {
@@ -145,38 +160,51 @@ function Pagamento() {
                 <section style={s.card} aria-label="Forma de pagamento">
                     <h2 style={s.cardTitle}>Forma de pagamento</h2>
 
-                    {tentouPrazoSemCliente && (
+                    {ehFicha && (
                         <div style={s.vincularBox} aria-label="Vincular cliente">
-                            <p style={s.msgAviso}>
-                                ⚠️ Pagamento a prazo requer um cliente cadastrado. Busque e selecione um cliente abaixo.
-                            </p>
-                            <label style={s.fieldLabel} htmlFor="busca-cliente">Buscar cliente</label>
-                            <input
-                                id="busca-cliente"
-                                style={s.inputBusca}
-                                placeholder="Digite o nome do cliente..."
-                                value={buscaCliente}
-                                onChange={e => { setBuscaCliente(e.target.value); buscarClientes(e.target.value) }}
-                                autoFocus
-                            />
-                            {clientes.length > 0 && (
-                                <ul style={s.clienteList} role="listbox">
-                                    {clientes.map(c => (
-                                        <li
-                                            key={c.id_cliente}
-                                            style={s.clienteItem}
-                                            onClick={() => !vinculando && vincularCliente(c)}
-                                            role="option"
-                                            aria-selected={false}
-                                        >
-                                            <span style={s.clienteNome}>{c.nome}</span>
-                                            <span style={s.clienteCpf}>{c.cpf}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                            {buscaCliente.length >= 2 && clientes.length === 0 && (
-                                <p style={s.muted}>Nenhum cliente encontrado.</p>
+                            {clienteSelecionado ? (
+                                <>
+                                    <p style={{ ...s.fieldLabel, marginBottom: 6 }}>Cliente vinculado</p>
+                                    <div style={s.clienteSelecionadoBox}>
+                                        <span style={s.clienteSelecionadoNome}>✓ {clienteSelecionado.nome}</span>
+                                        <span style={s.clienteSelecionadoCpf}>{clienteSelecionado.cpf}</span>
+                                        <button style={s.btnTrocar} onClick={() => { setClienteSelecionado(null); setBuscaCliente('') }}>Trocar</button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <p style={s.msgAviso}>
+                                        ⚠️ Pagamento a prazo requer um cliente cadastrado. Busque e selecione um cliente abaixo.
+                                    </p>
+                                    <label style={s.fieldLabel} htmlFor="busca-cliente">Buscar cliente</label>
+                                    <input
+                                        id="busca-cliente"
+                                        style={s.inputBusca}
+                                        placeholder="Digite o nome do cliente..."
+                                        value={buscaCliente}
+                                        onChange={e => { setBuscaCliente(e.target.value); buscarClientes(e.target.value) }}
+                                        autoFocus
+                                    />
+                                    {clientes.length > 0 && (
+                                        <ul style={s.clienteList} role="listbox">
+                                            {clientes.map(c => (
+                                                <li
+                                                    key={c.id_cliente}
+                                                    style={s.clienteItem}
+                                                    onClick={() => !vinculando && vincularCliente(c)}
+                                                    role="option"
+                                                    aria-selected={false}
+                                                >
+                                                    <span style={s.clienteNome}>{c.nome}</span>
+                                                    <span style={s.clienteCpf}>{c.cpf}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    {buscaCliente.length >= 2 && clientes.length === 0 && (
+                                        <p style={s.muted}>Nenhum cliente encontrado.</p>
+                                    )}
+                                </>
                             )}
                         </div>
                     )}
@@ -279,6 +307,10 @@ const s = {
     clienteList:     { listStyle: 'none', border: '1px solid #e4e4e4', borderRadius: 5, overflow: 'hidden', margin: 0, padding: 0 },
     clienteItem:     { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', cursor: 'pointer', borderTop: '1px solid #f0f0f0', background: '#fff', transition: 'background 0.1s' },
     clienteNome:     { fontSize: 13, color: '#333', fontWeight: 600 },
+    clienteSelecionadoBox: { display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', backgroundColor: '#e8f5e9', borderRadius: '6px', border: '1px solid #a5d6a7' },
+    clienteSelecionadoNome: { fontSize: 14, fontWeight: 600, color: '#2d6a4f', flex: 1 },
+    clienteSelecionadoCpf: { fontSize: 12, color: '#555' },
+    btnTrocar: { background: 'none', border: '1px solid #aaa', padding: '3px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', color: '#555' },
     clienteCpf:      { fontSize: 12, color: '#999' },
     footer:          { padding: '8px 20px', textAlign: 'right', fontSize: 12, borderTop: '1px solid #e8e8e8', background: '#fff' },
     footerLink:      { color: '#2f6fed', textDecoration: 'none' },
