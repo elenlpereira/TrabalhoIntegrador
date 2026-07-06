@@ -23,9 +23,19 @@ const Compra = sequelize.define('Compra', {
 
 // ── Validações ──
 
+const NOMES_CAMPOS = {
+    fk_produto:       'produto',
+    fk_fornecedor:    'fornecedor',
+    quantidade:       'quantidade',
+    custo_unitario:   'custo unitário',
+    data_recebimento: 'data de recebimento',
+};
+
 function validarCamposObrigatorios(dados) {
     const campos = ['fk_produto', 'fk_fornecedor', 'quantidade', 'custo_unitario', 'data_recebimento'];
-    const ausentes = campos.filter(c => dados[c] === undefined || dados[c] === null || dados[c] === '');
+    const ausentes = campos
+        .filter(c => dados[c] === undefined || dados[c] === null || dados[c] === '')
+        .map(c => NOMES_CAMPOS[c] || c);
     if (ausentes.length > 0) {
         throw new Error(`Campos obrigatórios ausentes: ${ausentes.join(', ')}`);
     }

@@ -1,4 +1,5 @@
 const CompraModel = require('../models/compraModel');
+const LogModel    = require('../models/logModel');
 const RESP_HTTP = require('../../consts');
 const helper = require('./helpers');
 
@@ -17,7 +18,9 @@ async function buscar(req, res) {
 
 async function criar(req, res) {
     try {
-        const novaCompra = await CompraModel.criar(req.body);
+        // Injeta o usuário autenticado para o log
+        const dados = { ...req.body, fk_usuario: req.usuario.id_usuario };
+        const novaCompra = await CompraModel.criar(dados);
         res.status(RESP_HTTP.CREATED)
             .set('Location', '/api/compras/' + novaCompra.id_compra)
             .json(novaCompra);
@@ -32,6 +35,12 @@ async function remover(req, res) {
     try {
         const compra = await CompraModel.remover(id);
         if (!compra) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Compra não encontrada' });
+        LogModel.registrar({
+            fk_usuario: req.usuario.id_usuario,
+            fk_compra:  compra.id_compra,
+            tipo:       'estornar_compra',
+            descricao:  `Compra ${compra.id_compra} estornada: produto ${compra.fk_produto}, qtd ${compra.quantidade}`,
+        }).catch(() => {});
         res.status(RESP_HTTP.OK).json({ mensagem: 'Compra estornada com sucesso', compra });
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });

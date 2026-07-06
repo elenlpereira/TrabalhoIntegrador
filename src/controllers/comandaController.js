@@ -42,7 +42,8 @@ async function adicionarConsumo(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
     try {
-        const comanda = await ComandaModel.adicionarConsumo(id, req.body);
+        const dados = { ...req.body, fk_usuario: req.usuario.id_usuario };
+        const comanda = await ComandaModel.adicionarConsumo(id, dados);
         if (!comanda) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Comanda não encontrada' });
         res.status(RESP_HTTP.OK).json(comanda);
     } catch (err) {
@@ -90,7 +91,8 @@ async function fechar(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
     try {
-        const comanda = await ComandaModel.fechar(id, req.body);
+        const dados = { ...req.body, fk_usuario: req.usuario.id_usuario };
+        const comanda = await ComandaModel.fechar(id, dados);
         if (!comanda) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Comanda não encontrada' });
         res.status(RESP_HTTP.OK).json({ mensagem: 'Comanda fechada com sucesso', comanda });
     } catch (err) {
@@ -102,7 +104,7 @@ async function cancelar(req, res) {
     const id = helper.obterId(req, res);
     if (id === null) return;
     try {
-        const comanda = await ComandaModel.cancelar(id);
+        const comanda = await ComandaModel.cancelar(id, req.usuario.id_usuario);
         if (!comanda) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Comanda não encontrada' });
         res.status(RESP_HTTP.OK).json({ mensagem: 'Comanda cancelada com sucesso', comanda });
     } catch (err) {

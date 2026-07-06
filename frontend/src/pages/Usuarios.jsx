@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import Header from '../components/Header'
 import api from '../services/api'
+import { useOrdenacao, Th } from '../hooks/useOrdenacao.jsx'
 
 const BADGE = {
     Gerente:   { backgroundColor: '#1a237e', color: '#fff' },
@@ -16,6 +17,7 @@ function Usuarios() {
     const [busca, setBusca] = useState('')
     const [erro, setErro] = useState(null)
     const [removendo, setRemovendo] = useState(null)
+    const { coluna, direcao, alternar, ordenar } = useOrdenacao()
 
     useEffect(() => {
         carregarUsuarios()
@@ -46,10 +48,10 @@ function Usuarios() {
         }
     }
 
-    const usuariosFiltrados = usuarios.filter(u =>
+    const usuariosFiltrados = ordenar(usuarios.filter(u =>
         u.nome.toLowerCase().includes(busca.toLowerCase()) ||
         u.email.toLowerCase().includes(busca.toLowerCase())
-    )
+    ))
 
     return (
         <div style={styles.container}>
@@ -67,7 +69,7 @@ function Usuarios() {
                     <div style={styles.buscaRow}>
                         <input
                             style={styles.input}
-                            placeholder="Nome ou e-mail"
+                            placeholder="Pesquise por nome ou e-mail"
                             value={busca}
                             onChange={e => setBusca(e.target.value)}
                         />
@@ -78,9 +80,9 @@ function Usuarios() {
                     <table style={styles.tabela}>
                         <thead>
                             <tr>
-                                <th style={styles.th}>Nome</th>
-                                <th style={styles.th}>E-mail</th>
-                                <th style={styles.th}>Perfil</th>
+                                <Th label="Nome"   col="nome"          coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="E-mail" col="email"         coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="Perfil" col="perfil_acesso" coluna={coluna} direcao={direcao} onSort={alternar} />
                                 <th style={styles.th}></th>
                             </tr>
                         </thead>
