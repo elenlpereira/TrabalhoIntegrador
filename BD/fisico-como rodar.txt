@@ -1,0 +1,11 @@
+Criar banco: 
+psql -U dani -d postgres -W -f /home/dani/Downloads/fisico_cria_banco.sql
+
+Criar tabelas: 
+psql -U dani -d postgres -W -f /home/dani/Downloads/fisico_cria_tabelas.sql
+
+Acessar o banco e ver que rodou:
+psql -U dani -d sistema_bar
+
+Para rodar o popula_banco.sql:
+psql -U dani -d sistema_bar -f /home/dani/Downloads/popula_banco.sql
