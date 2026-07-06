@@ -1,19 +1,319 @@
-# Trabalho Integrador - Programação II
+# Sistema de Gerenciamento de Bar — Trabalho Integrador
 
-Sistema de gerenciamento de bar para controle operacional e financeiro.
+Sistema web para gerenciamento operacional e financeiro de bar, desenvolvido como trabalho integrador da disciplina GEX613 — Programação II (UFFS).
 
-## Funcionalidades
+## Funcionalidades implementadas
 
-- CRUD de usuário
-- CRUD de cliente
-- CRUD de fornecedores
-- CRUD de produto
-- Compras (entrada de estoque com rastreamento de fornecedor e NF)
-- Saída manual do estoque (devolução, quebra, vencimento, erro operacional)
-- Saída automática por venda
-- Comanda (conta): abertura, adição/edição/remoção de itens, fechamento e cancelamento
-- Controle de estoque com reserva por comandas abertas
-- Registro automático de saídas ao fechar comanda
+### Autenticação e controle de acesso
+- Login com e-mail e senha (JWT, validade de 8 horas)
+- Dois perfis: Atendente e Gerente
+- Rotas protegidas no backend (middleware JWT) e no frontend (componente `RotaProtegida`)
+- Botão Sair limpa sessão e redireciona para login
+
+### Comandas
+- Abertura de comanda com identificação livre (mesa, nome, etc.)
+- Adição, edição e remoção de produtos com atualização automática do estoque
+- Fechamento com escolha de forma de pagamento (dinheiro, pix, débito, crédito, a prazo)
+- Cancelamento — devolve todos os itens ao estoque
+- Histórico de comandas fechadas/canceladas com filtro por status
+- Pagamento "à prazo" vincula um cliente e gera débito na ficha
+
+### Estoque
+- CRUD de produtos (nome, categoria, preço de custo/venda, estoque mínimo)
+- Estoque decrementado automaticamente ao **adicionar** item em comanda
+- Estoque devolvido ao **remover** item ou **cancelar** comanda
+- Alerta visual para produtos com estoque abaixo do mínimo
+- Filtro por categoria e ordenação por qualquer coluna
+
+### Compras (Entrada de estoque)
+- Registro de compra vincula produto + fornecedor + quantidade + custo unitário + data
+- Incrementa o estoque do produto imediatamente
+- Estorno de compra reverte a entrada do estoque
+
+### Clientes e Fornecedores
+- CRUD de clientes com CPF único; "Consumidor Final" (id=1) é protegido
+- CRUD de fornecedores com CNPJ único e categoria de produtos fornecidos
+- Busca por nome, CPF/CNPJ
+
+### Fichas (Débitos a prazo)
+- Geração automática de débito ao fechar comanda com pagamento "a prazo"
+- Quitação total ou parcial com registro de valor pago e saldo devedor
+- Extrato por cliente (histórico de débitos e pagamentos)
+
+### Usuários
+- CRUD de usuários restrito a Gerentes
+- Senha armazenada com hash bcrypt; confirmação obrigatória no cadastro
+- Restrição para não deletar o próprio usuário nem alterar o próprio perfil
+
+### Dashboard e Relatórios
+- Cards de resumo: comandas abertas, fechadas hoje, fichas pendentes, ações de auditoria
+- Comandas abertas em tempo real (atualização automática a cada 30s)
+- Produtos com estoque abaixo do mínimo
+- Vendas por produto e forma de pagamento (filtro por período)
+- Clientes com fiado pendente e saldo devedor real
+
+### Auditoria (Logs)
+- Registro automático de todas as ações relevantes: login, cadastros, edições, remoções, movimentações de estoque e comandas
+- Filtro por período (UTC-3) e por tipo de ação (checkboxes múltiplos)
+- Clique em `#id_comanda` abre a comanda diretamente
+
+## Regras de negócio
+
+### Estoque
+- Ao **adicionar** produto em comanda aberta → estoque físico decrementado imediatamente
+- Ao **editar quantidade** de item (aumentar) → desconta a diferença do estoque
+- Ao **editar quantidade** (diminuir) ou **remover item** → devolve ao estoque
+- Ao **cancelar** comanda → devolve todos os itens ao estoque
+- Ao **fechar** comanda → nenhuma movimentação adicional (já foi decrementado na adição)
+- Ao **registrar compra** → incrementa o estoque do produto
+- Ao **estornar compra** → decrementa o estoque na mesma quantidade
+
+### Comandas
+- Podem ser abertas sem vínculo de cliente (usa "Consumidor Final" como padrão)
+- Não podem ser fechadas sem nenhum item
+- Após fechadas ou canceladas, não podem ser alteradas
+- Pagamento "a prazo" exige vínculo com cliente cadastrado (diferente de Consumidor Final) e gera débito na ficha
+
+### Clientes
+- O registro `id=1 / Consumidor Final` é protegido — não pode ser editado nem removido
+- CPF deve ser único; e-mail é opcional mas também deve ser único quando informado
+- Não é possível remover cliente com comandas vinculadas
+
+### Usuários
+- Perfis válidos: `Atendente` e `Gerente`
+- Senha mínima de 6 caracteres, armazenada com bcrypt
+- Gerente não pode remover a própria conta nem alterar o próprio perfil de acesso
+
+### Fichas
+- Criadas automaticamente ao fechar comanda com forma "a prazo"
+- Status: `pendente` → `pago_parcial` → `pago`
+- O saldo devedor é calculado campo a campo na tabela `divida`
+
+## Perfis e permissões
+
+| Módulo | Atendente | Gerente |
+|--------|-----------|---------|
+| Dashboard | ✅ | ✅ |
+| Consumo (comandas) | ✅ | ✅ |
+| Clientes | ✅ | ✅ |
+| Estoque (visualizar/editar) | ✅ | ✅ |
+| Fichas / Débitos | ✅ | ✅ |
+| Compras | ❌ | ✅ |
+| Fornecedores | ❌ | ✅ |
+| Usuários | ❌ | ✅ |
+| Logs de auditoria | ❌ | ✅ |
+
+## Stack
+
+### Backend
+- **Node.js + Express 5**: servidor HTTP e roteamento.
+- **Sequelize 6**: ORM para mapeamento objeto-relacional e queries.
+- **PostgreSQL**: banco de dados relacional.
+- **jsonwebtoken**: geração e validação de tokens JWT.
+- **bcryptjs**: hash de senhas.
+- **dotenv**: variáveis de ambiente.
+- **cors**: habilitação de CORS para o frontend.
+
+### Frontend
+- **React 19**: biblioteca de interface.
+- **Vite**: bundler e servidor de desenvolvimento.
+- **React Router DOM 7**: navegação entre páginas.
+- **Axios**: cliente HTTP com interceptor JWT automático.
+
+## Estrutura do projeto
+
+```
+config/
+  localConnection.js      # instância Sequelize (lê .env)
+  config.json             # credenciais para o sequelize-cli
+docs/
+  autenticacao.md         # documentação do sistema de auth e credenciais padrão
+migrations/               # DDL versionado — cria/remove tabelas
+seeders/                  # dados iniciais (Consumidor Final + dados de teste)
+src/
+  app.js                  # Express: middlewares, CORS, rotas, error handler
+  middlewares/
+    autenticar.js         # verifica JWT em todas as rotas protegidas
+    autorizarGerente.js   # bloqueia não-Gerentes com 403
+  controllers/            # recebem req/res e delegam ao model
+  models/
+    index.js              # carrega todos os models e define associações
+    *.js                  # schema Sequelize + funções de serviço async
+  routes/                 # mapeamento URL → controller
+frontend/
+  index.html
+  vite.config.js
+  src/
+    App.jsx               # rotas com AuthProvider e RotaProtegida
+    contexts/
+      AuthContext.jsx     # estado global de autenticação
+    components/
+      Header.jsx          # cabeçalho compartilhado (nome, perfil, Sair)
+      RotaProtegida.jsx   # redireciona para /login se não autenticado
+    hooks/
+      useOrdenacao.jsx    # hook de ordenação por coluna para tabelas
+    pages/                # componentes de página
+    services/
+      api.js              # instância Axios com interceptor de token
+```
+
+## Pré-requisitos
+
+- Node.js 18+
+- PostgreSQL 14+
+- `npx` disponível (incluso no npm 5.2+)
+
+## Configuração
+
+### 1. Instalar dependências do backend
+
+```bash
+npm install
+```
+
+### 2. Criar o arquivo `.env`
+
+```bash
+cp .env.exemple .env
+```
+
+Preencha as variáveis:
+
+```env
+DB_NAME=sistema_bar
+DB_USER=postgres
+DB_PASSWORD=sua_senha
+DB_HOST=localhost
+DB_PORT=5432
+PORT=3000
+JWT_SECRET=seu_segredo_jwt
+```
+
+### 3. Criar o banco de dados
+
+```bash
+sudo -u postgres psql -c "CREATE DATABASE sistema_bar;"
+# ou, se configurado com senha via TCP:
+psql -h 127.0.0.1 -U postgres -c "CREATE DATABASE sistema_bar;"
+```
+
+### 4. Ajustar `config/config.json`
+
+Certifique-se de que as credenciais em `config/config.json` (usadas pelo sequelize-cli) correspondem ao banco criado.
+
+### 5. Executar as migrations
+
+```bash
+npx sequelize-cli db:migrate
+```
+
+Tabelas criadas: `usuario`, `cliente`, `fornecedor`, `produto`, `compra`, `nota_fiscal`, `saida`, `comanda`, `consumo`, `log`, `divida`.
+
+### 6. Inserir dados iniciais
+
+```bash
+npx sequelize-cli db:seed:all
+```
+
+Insere o registro obrigatório `Consumidor Final` (id=1) e dados de teste (5 registros por entidade).
+
+Para desfazer:
+
+```bash
+npx sequelize-cli db:seed:undo:all
+```
+
+## Inicialização
+
+### Backend
+
+```bash
+npm run dev
+```
+
+Sobe em `http://localhost:3000`.
+
+### Frontend
+
+Em outro terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Sobe em `http://localhost:5173`.
+
+> O backend deve estar rodando antes de abrir o frontend.
+
+## Credenciais padrão (seeds)
+
+| Perfil | E-mail | Senha |
+|--------|--------|-------|
+| Gerente | `admin@bar.com` | `123456` |
+| Atendente | `maria@bar.com` | `123456` |
+
+> Todos os usuários do seed usam a senha `123456`.
+
+## Rotas disponíveis
+
+### API — `http://localhost:3000`
+
+| Método | Rota | Acesso | Descrição |
+|--------|------|--------|-----------|
+| `POST` | `/api/auth/login` | Pública | Login — retorna JWT |
+| `GET/POST` | `/api/usuarios` | Gerente | Listar / criar usuários |
+| `PUT/PATCH/DELETE` | `/api/usuarios/:id` | Gerente | Editar / remover usuário |
+| `GET/POST` | `/api/clientes` | Autenticado | Listar / criar clientes |
+| `GET` | `/api/clientes/busca?nome=` | Autenticado | Busca por nome |
+| `GET` | `/api/clientes/cpf/:cpf` | Autenticado | Busca por CPF |
+| `PUT/PATCH/DELETE` | `/api/clientes/:id` | Autenticado | Editar / remover cliente |
+| `GET` | `/api/fornecedores` | Autenticado | Listar fornecedores |
+| `POST/PUT/PATCH/DELETE` | `/api/fornecedores` | Gerente | Criar / editar / remover |
+| `GET/POST` | `/api/produtos` | Autenticado | Listar / criar produtos |
+| `PUT/PATCH/DELETE` | `/api/produtos/:id` | Autenticado | Editar / remover produto |
+| `GET/POST` | `/api/compras` | Gerente | Listar / registrar compras |
+| `DELETE` | `/api/compras/:id` | Gerente | Estornar compra |
+| `GET/POST` | `/api/comandas` | Autenticado | Listar / abrir comandas |
+| `PATCH` | `/api/comandas/:id` | Autenticado | Atualizar cabeçalho |
+| `POST` | `/api/comandas/:id/fechar` | Autenticado | Fechar comanda |
+| `DELETE` | `/api/comandas/:id` | Autenticado | Cancelar comanda |
+| `POST` | `/api/comandas/:id/consumos` | Autenticado | Adicionar item |
+| `PATCH/DELETE` | `/api/comandas/:id/consumos/:cid` | Autenticado | Editar / remover item |
+| `GET` | `/api/fichas` | Autenticado | Listar fichas |
+| `POST` | `/api/fichas/:clienteId/quitar` | Autenticado | Quitar débito |
+| `GET` | `/api/logs` | Autenticado | Logs de auditoria |
+| `GET` | `/api/dashboard` | Autenticado | Resumo (cards) |
+| `GET` | `/api/dashboard/analise` | Autenticado | Análise por período |
+
+### Frontend — `http://localhost:5173`
+
+| Rota | Acesso | Descrição |
+|------|--------|-----------|
+| `/login` | Pública | Tela de login |
+| `/` | Autenticado | Home — menu de módulos |
+| `/dashboard` | Autenticado | Dashboard com análises |
+| `/consumo` | Autenticado | Comandas abertas |
+| `/consumo/nova` | Autenticado | Nova comanda |
+| `/consumo/:id` | Autenticado | Editar comanda |
+| `/historico` | Autenticado | Comandas fechadas/canceladas |
+| `/pagamento/:id` | Autenticado | Pagamento de comanda |
+| `/clientes` | Autenticado | Listagem de clientes |
+| `/clientes/novo` | Autenticado | Cadastrar cliente |
+| `/clientes/:id` | Autenticado | Editar cliente |
+| `/estoque` | Autenticado | Listagem de produtos |
+| `/estoque/novo` | Autenticado | Cadastrar produto |
+| `/estoque/:id` | Autenticado | Editar produto |
+| `/fornecedores` | Gerente | Listagem de fornecedores |
+| `/fornecedores/novo` | Gerente | Cadastrar fornecedor |
+| `/fornecedores/:id` | Gerente | Editar fornecedor |
+| `/compras/nova` | Gerente | Registrar compra |
+| `/usuarios` | Gerente | Listagem de usuários |
+| `/usuarios/novo` | Gerente | Cadastrar usuário |
+| `/usuarios/:id` | Gerente | Editar usuário |
+| `/logs` | Gerente | Auditoria de ações |
+
 
 ## Regras de negócio
 
