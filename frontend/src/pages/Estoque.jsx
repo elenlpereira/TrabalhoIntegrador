@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import Header from '../components/Header'
+import { useOrdenacao, Th } from '../hooks/useOrdenacao.jsx'
 
 const CATEGORIAS = ['Todas', 'bebidas', 'alimentos', 'mercearia', 'outros']
 
@@ -10,6 +11,8 @@ function Estoque() {
     const [produtos, setProdutos] = useState([])
     const [busca, setBusca] = useState('')
     const [categoria, setCategoria] = useState('Todas')
+    const [apenasEstoqueBaixo, setApenasEstoqueBaixo] = useState(false)
+    const { coluna, direcao, alternar, ordenar } = useOrdenacao()
     const [erro, setErro] = useState(null)
     const [removendo, setRemovendo] = useState(null)
 
@@ -41,9 +44,13 @@ function Estoque() {
         }
     }
 
-    const produtosFiltrados = produtos.filter(p =>
+    let produtosFiltrados = produtos.filter(p =>
         p.nome.toLowerCase().includes(busca.toLowerCase())
     )
+    if (apenasEstoqueBaixo) {
+        produtosFiltrados = produtosFiltrados.filter(p => p.quantidade_estoque <= p.estoque_minimo)
+    }
+    produtosFiltrados = ordenar(produtosFiltrados)
 
     return (
         <div style={styles.container}>
@@ -67,13 +74,22 @@ function Estoque() {
                 </aside>
 
                 <main style={styles.main}>
-                    <div style={styles.buscaRow}>
+                    <div style={styles.filtrosRow}>
                         <input
-                            style={styles.input}
-                            placeholder="Pesquisar produtos"
+                            style={{ ...styles.input, flex: 2 }}
+                            placeholder="Pesquisar produtos por nome"
                             value={busca}
                             onChange={e => setBusca(e.target.value)}
                         />
+                        <label style={styles.checkLabel}>
+                            <input
+                                type="checkbox"
+                                checked={apenasEstoqueBaixo}
+                                onChange={e => setApenasEstoqueBaixo(e.target.checked)}
+                                style={{ marginRight: 6 }}
+                            />
+                            Apenas estoque baixo
+                        </label>
                     </div>
 
                     {erro && <p style={{ color: 'red' }}>{erro}</p>}
@@ -81,9 +97,13 @@ function Estoque() {
                     <table style={styles.tabela}>
                         <thead>
                             <tr>
-                                {['Produto', 'Categoria', 'Estoque', 'Mínimo', 'Preço custo', 'Preço venda', ''].map(h => (
-                                    <th key={h} style={styles.th}>{h}</th>
-                                ))}
+                                <Th label="Produto"      col="nome"               coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="Categoria"    col="categoria"          coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="Estoque"      col="quantidade_estoque" coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="Mínimo"       col="estoque_minimo"     coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="Preço custo"  col="preco_custo"        coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="Preço venda"  col="preco_venda"        coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <th style={styles.th}></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -128,6 +148,8 @@ const styles = {
     sidebarTitulo: { fontSize: '11px', color: '#888', marginTop: '8px' },
     sidebarItem: { background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', padding: '4px 0', fontSize: '14px' },
     main: { flex: 1, padding: '24px' },
+    filtrosRow: { display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '16px' },
+    checkLabel: { display: 'flex', alignItems: 'center', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' },
     buscaRow: { marginBottom: '16px' },
     input: { width: '100%', padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px' },
     tabela: { width: '100%', borderCollapse: 'collapse' },

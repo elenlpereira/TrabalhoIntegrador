@@ -190,9 +190,8 @@ async function adicionarConsumo(id, dados) {
     const incremento = qtdAdd * Number(produto.preco_venda);
     await comanda.update({ valor_total: Number(comanda.valor_total) + incremento });
 
-    const fk_usuario = dados.fk_usuario || 1;
     await LogModel.registrar({
-        fk_usuario,
+        fk_usuario: dados.fk_usuario || 1,
         fk_comanda: id,
         tipo: 'adicionar_consumo',
         descricao: `Produto ${produto.id_produto} (${produto.nome}) x${qtdAdd} adicionado à comanda ${id}`,
@@ -230,6 +229,17 @@ async function atualizarConsumo(id, consumoId, dados) {
         observacoes: dados.observacoes !== undefined ? dados.observacoes : consumo.observacoes,
     });
     await comanda.update({ valor_total: Number(comanda.valor_total) + diff * Number(produto.preco_venda) });
+
+    if (diff !== 0) {
+        await LogModel.registrar({
+            fk_usuario: dados.fk_usuario || 1,
+            fk_comanda: id,
+            tipo: diff > 0 ? 'adicionar_consumo' : 'editar_consumo',
+            descricao: diff > 0
+                ? `Produto ${produto.id_produto} (${produto.nome}) x${diff} adicionado à comanda ${id} (total: ${novaQtd})`
+                : `Produto ${produto.id_produto} (${produto.nome}) x${Math.abs(diff)} removido da comanda ${id} (total: ${novaQtd})`,
+        });
+    }
 
     return _buscarComandaComConsumos(id);
 }
@@ -309,7 +319,7 @@ async function fechar(id, dados = {}) {
     return _buscarComandaComConsumos(id);
 }
 
-async function cancelar(id) {
+async function cancelar(id, fk_usuario = 1) {
     const comanda = await _buscarComandaComConsumos(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
@@ -320,6 +330,14 @@ async function cancelar(id) {
     }
 
     await comanda.update({ status: STATUS.CANCELADA, data_hora_termino: new Date() });
+
+    await LogModel.registrar({
+        fk_usuario,
+        fk_comanda: comanda.id_comanda,
+        tipo: 'cancelar_comanda',
+        descricao: `Comanda ${comanda.id_comanda} cancelada. Estoque de ${comanda.consumos.length} item(ns) devolvido.`,
+    });
+
     return comanda;
 }
 

@@ -16,6 +16,7 @@ import Fornecedor from './pages/Fornecedor'
 import Usuarios from './pages/Usuarios'
 import Usuario from './pages/Usuario'
 import Logs from './pages/Logs'
+import Historico from './pages/Historico'
 import Compra from './pages/Compra'
 import Pagamento from './pages/Pagamento'
 import Debitos from './pages/Debitos'
@@ -52,6 +53,7 @@ function App() {
         <Route path="/usuarios/:id" element={<RotaProtegida apenasGerente><Usuario /></RotaProtegida>} />
 
         <Route path="/logs" element={<RotaProtegida apenasGerente><Logs /></RotaProtegida>} />
+        <Route path="/historico" element={<RotaProtegida><Historico /></RotaProtegida>} />
                                  
         <Route path="/compras/nova" element={<RotaProtegida apenasGerente><Compra /></RotaProtegida>} />
 

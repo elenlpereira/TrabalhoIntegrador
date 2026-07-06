@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import Header from '../components/Header'
+import { useOrdenacao, Th } from '../hooks/useOrdenacao.jsx'
 
 // id=1 é o Consumidor Final — protegido no backend, ocultamos na lista
 const CONSUMIDOR_FINAL_ID = 1
@@ -12,6 +13,7 @@ function Clientes() {
     const [busca, setBusca] = useState('')
     const [erro, setErro] = useState(null)
     const [removendo, setRemovendo] = useState(null)
+    const { coluna, direcao, alternar, ordenar } = useOrdenacao()
 
     useEffect(() => {
         carregarClientes()
@@ -39,10 +41,10 @@ function Clientes() {
         }
     }
 
-    const clientesFiltrados = clientes.filter(c =>
+    const clientesFiltrados = ordenar(clientes.filter(c =>
         c.nome.toLowerCase().includes(busca.toLowerCase()) ||
         (c.cpf || '').includes(busca)
-    )
+    ))
 
     return (
         <div style={styles.container}>
@@ -60,7 +62,7 @@ function Clientes() {
                     <div style={styles.buscaRow}>
                         <input
                             style={styles.input}
-                            placeholder="Digite aqui"
+                            placeholder="Pesquise por nome ou CPF"
                             value={busca}
                             onChange={e => setBusca(e.target.value)}
                         />
@@ -71,9 +73,9 @@ function Clientes() {
                     <table style={styles.tabela}>
                         <thead>
                             <tr>
-                                <th style={styles.th}>Cliente</th>
-                                <th style={styles.th}>CPF</th>
-                                <th style={styles.th}>Telefone</th>
+                                <Th label="Cliente"  col="nome"     coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="CPF"      col="cpf"      coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="Telefone" col="telefone" coluna={coluna} direcao={direcao} onSort={alternar} />
                                 <th style={styles.th}></th>
                             </tr>
                         </thead>

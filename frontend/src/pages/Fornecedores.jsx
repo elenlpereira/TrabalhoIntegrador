@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import Header from '../components/Header'
+import { useOrdenacao, Th } from '../hooks/useOrdenacao.jsx'
 
 function Fornecedores() {
     const navigate = useNavigate()
@@ -10,6 +11,7 @@ function Fornecedores() {
     const [categoria, setCategoria] = useState('Todas')
     const [erro, setErro] = useState(null)
     const [removendo, setRemovendo] = useState(null)
+    const { coluna, direcao, alternar, ordenar } = useOrdenacao()
 
     useEffect(() => {
         carregarFornecedores()
@@ -39,12 +41,12 @@ function Fornecedores() {
 
     const categorias = ['Todas', ...new Set(fornecedores.map(f => f.categoria_produtos).filter(Boolean))]
 
-    const fornecedoresFiltrados = fornecedores.filter(f => {
+    const fornecedoresFiltrados = ordenar(fornecedores.filter(f => {
         const buscaOk = f.razao_social.toLowerCase().includes(busca.toLowerCase()) ||
             (f.cnpj || '').includes(busca.replace(/\D/g, ''))
         const catOk = categoria === 'Todas' || f.categoria_produtos === categoria
         return buscaOk && catOk
-    })
+    }))
 
     return (
         <div style={styles.container}>
@@ -76,7 +78,7 @@ function Fornecedores() {
                     <div style={styles.buscaRow}>
                         <input
                             style={styles.input}
-                            placeholder="Digite aqui"
+                            placeholder="Pesquise por razão social ou CNPJ"
                             value={busca}
                             onChange={e => setBusca(e.target.value)}
                         />
@@ -87,10 +89,10 @@ function Fornecedores() {
                     <table style={styles.tabela}>
                         <thead>
                             <tr>
-                                <th style={styles.th}>Razão social</th>
-                                <th style={styles.th}>CNPJ</th>
-                                <th style={styles.th}>Telefone</th>
-                                <th style={styles.th}>Categoria</th>
+                                <Th label="Razão social" col="razao_social"       coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="CNPJ"        col="cnpj"                coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="Telefone"    col="telefone"            coluna={coluna} direcao={direcao} onSort={alternar} />
+                                <Th label="Categoria"   col="categoria_produtos"  coluna={coluna} direcao={direcao} onSort={alternar} />
                                 <th style={styles.th}></th>
                             </tr>
                         </thead>
