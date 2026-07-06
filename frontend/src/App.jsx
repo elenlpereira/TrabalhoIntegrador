@@ -18,6 +18,7 @@ import Usuario from './pages/Usuario'
 import Logs from './pages/Logs'
 import Compra from './pages/Compra'
 import Pagamento from './pages/Pagamento'
+import Debitos from './pages/Debitos'
 
 function App() {
   return (
@@ -39,6 +40,8 @@ function App() {
         <Route path="/clientes" element={<RotaProtegida><Clientes /></RotaProtegida>} />
         <Route path="/clientes/novo" element={<RotaProtegida><Cliente /></RotaProtegida>} />
         <Route path="/clientes/:id" element={<RotaProtegida><Cliente /></RotaProtegida>} />
+
+        <Route path="/debitos" element={<RotaProtegida><Debitos /></RotaProtegida>} />
 
         <Route path="/fornecedores" element={<RotaProtegida apenasGerente><Fornecedores /></RotaProtegida>} />
         <Route path="/fornecedores/novo" element={<RotaProtegida apenasGerente><Fornecedor /></RotaProtegida>} />

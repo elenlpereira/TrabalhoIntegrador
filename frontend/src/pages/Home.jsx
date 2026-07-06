@@ -12,6 +12,7 @@ function Home() {
         { nome: 'Consumo',   caminho: '/consumo' },
         { nome: 'Clientes',  caminho: '/clientes' },
         { nome: 'Estoque',   caminho: '/estoque' },
+        { nome: 'Débitos',   caminho: '/debitos' },
         ...(isGerente ? [
             { nome: 'Fornecedores', caminho: '/fornecedores' },
             { nome: 'Usuários',     caminho: '/usuarios' },

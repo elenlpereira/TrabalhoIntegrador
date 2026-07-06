@@ -84,9 +84,15 @@ async function totalDevidoPorCliente(clienteId) {
 }
 
 // RF14 / RF15 — quitacao parcial ou total: aplica o valor as dividas mais antigas primeiro (FIFO)
-async function quitar(clienteId, { valor, fk_usuario }) {
+async function quitar(clienteId, { valor, fk_usuario, forma_pagamento }) {
     await validarClienteExiste(clienteId);
     if (!valor || Number(valor) <= 0) throw new Error('O valor do pagamento deve ser maior que zero');
+
+    const formasValidas = ['dinheiro', 'pix', 'credito', 'debito'];
+    const forma = forma_pagamento ? String(forma_pagamento).toLowerCase() : 'dinheiro';
+    if (!formasValidas.includes(forma)) {
+        throw new Error(`Forma de pagamento inválida. Use: ${formasValidas.join(', ')}`);
+    }
 
     const pendentes = await Divida.findAll({
         where: {
@@ -117,7 +123,7 @@ async function quitar(clienteId, { valor, fk_usuario }) {
         await LogModel.registrar({
             fk_usuario: Number(fk_usuario),
             tipo: 'quitar_ficha',
-            descricao: `Quitacao R$ ${valorPago.toFixed(2)} na ficha do cliente ${clienteId}`,
+            descricao: `Quitacao R$ ${valorPago.toFixed(2)} via ${forma} na ficha do cliente ${clienteId}`,
         });
     }
 
