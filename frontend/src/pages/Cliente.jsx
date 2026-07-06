@@ -48,6 +48,14 @@ function Cliente() {
 
     async function handleSubmit() {
         setErro(null)
+
+        if (!form.nome.trim()) return setErro('Nome é obrigatório')
+        if (!form.cpf.trim())  return setErro('CPF é obrigatório')
+        if (!form.telefone.trim()) return setErro('Telefone é obrigatório')
+        if (!/^\d+$/.test(form.telefone.replace(/[\s()\-]/g, ''))) {
+            return setErro('Telefone deve conter apenas números')
+        }
+
         setSalvando(true)
         try {
             if (editando) {

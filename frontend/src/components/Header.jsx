@@ -13,7 +13,7 @@ function Header({ voltarPara }) {
     return (
         <header style={styles.header}>
             <div style={styles.esquerda}>
-                <span style={styles.barName}>Bar Pereira</span>
+                <span style={styles.barName} onClick={() => navigate('/')}>Bar Pereira</span>
                 <span style={styles.separador}>—</span>
                 <span style={styles.nome}>{usuario?.nome}</span>
                 {usuario?.perfil_acesso && (
@@ -44,7 +44,7 @@ const styles = {
         color: '#fff',
     },
     esquerda: { display: 'flex', alignItems: 'center', gap: '10px' },
-    barName: { fontWeight: 'bold', fontSize: '15px', color: '#fff' },
+    barName: { fontWeight: 'bold', fontSize: '15px', color: '#fff', cursor: 'pointer' },
     separador: { color: '#666', fontSize: '14px' },
     nome: { fontWeight: '400', fontSize: '14px', color: '#ddd' },
     perfil: { color: '#aaa', fontSize: '13px' },

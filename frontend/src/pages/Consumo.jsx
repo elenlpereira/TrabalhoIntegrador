@@ -49,7 +49,9 @@ function Consumo() {
                                 style={s.comandaItem}
                                 onClick={() => navigate(`/consumo/${c.id_comanda}`)}
                             >
-                                <span>{c.info_cliente || `#${c.id_comanda}`}</span>
+                                <span>
+                                    {c.identificacao || `#${c.id_comanda}`}
+                                </span>
                                 <span style={s.editIcon}>✎</span>
                             </button>
                         ))}

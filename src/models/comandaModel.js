@@ -164,16 +164,17 @@ async function adicionarConsumo(id, dados) {
     const produto = await validarProdutoExiste(Number(dados.fk_produto));
     const qtdAdd  = validarQuantidade(dados.quantidade);
 
-    const consumoExistente = comanda.consumos.find(c => c.fk_produto === produto.id_produto);
-    const qtdNaComanda     = consumoExistente ? consumoExistente.quantidade : 0;
-
-    const disponivel = await estoqueDisponivel(produto.id_produto, id);
-    if (qtdNaComanda + qtdAdd > disponivel) {
+    // Verifica estoque físico diretamente (já decrementamos na hora de adicionar)
+    if (produto.quantidade_estoque < qtdAdd) {
         throw new Error(
-            `Estoque insuficiente. Disponível (fora desta comanda): ${disponivel - qtdNaComanda}, solicitado: ${qtdAdd}`
+            `Estoque insuficiente. Disponível: ${produto.quantidade_estoque}, solicitado: ${qtdAdd}`
         );
     }
 
+    // Decrementa o estoque imediatamente
+    await EstoqueModel.saida(produto.id_produto, qtdAdd);
+
+    const consumoExistente = comanda.consumos.find(c => c.fk_produto === produto.id_produto);
     if (consumoExistente) {
         await consumoExistente.update({ quantidade: consumoExistente.quantidade + qtdAdd });
     } else {
@@ -208,15 +209,22 @@ async function atualizarConsumo(id, consumoId, dados) {
     const consumo = comanda.consumos.find(c => c.id_consumo === Number(consumoId));
     if (!consumo) throw new Error(`Consumo com id ${consumoId} não encontrado na comanda`);
 
-    const novaQtd    = validarQuantidade(dados.quantidade);
-    const disponivel = await estoqueDisponivel(consumo.fk_produto, id);
-    if (novaQtd > disponivel) {
-        throw new Error(`Estoque insuficiente. Disponível: ${disponivel}, solicitado: ${novaQtd}`);
+    const novaQtd = validarQuantidade(dados.quantidade);
+    const diff    = novaQtd - consumo.quantidade; // positivo = mais itens, negativo = menos
+
+    if (diff > 0) {
+        // Precisa de mais estoque
+        const produto = await validarProdutoExiste(consumo.fk_produto);
+        if (produto.quantidade_estoque < diff) {
+            throw new Error(`Estoque insuficiente. Disponível: ${produto.quantidade_estoque}, necessário: ${diff}`);
+        }
+        await EstoqueModel.saida(consumo.fk_produto, diff);
+    } else if (diff < 0) {
+        // Devolve estoque
+        await EstoqueModel.entrada(consumo.fk_produto, Math.abs(diff));
     }
 
     const produto = await validarProdutoExiste(consumo.fk_produto);
-    const diff    = novaQtd - consumo.quantidade;
-
     await consumo.update({
         quantidade:  novaQtd,
         observacoes: dados.observacoes !== undefined ? dados.observacoes : consumo.observacoes,
@@ -236,6 +244,9 @@ async function removerConsumo(id, consumoId) {
 
     const produto    = await validarProdutoExiste(consumo.fk_produto);
     const decremento = consumo.quantidade * Number(produto.preco_venda);
+
+    // Devolve ao estoque ao remover o item
+    await EstoqueModel.entrada(consumo.fk_produto, consumo.quantidade);
 
     await consumo.destroy();
     await comanda.update({ valor_total: Math.max(0, Number(comanda.valor_total) - decremento) });
@@ -265,9 +276,7 @@ async function fechar(id, dados = {}) {
         }
     }
 
-    for (const consumo of comanda.consumos) {
-        await EstoqueModel.saida(consumo.fk_produto, consumo.quantidade);
-    }
+    // Estoque já foi decrementado quando os itens foram adicionados — não decrementa novamente
 
     const novoStatus = ehFicha ? STATUS.A_RECEBER : STATUS.FECHADA;
 
@@ -304,6 +313,12 @@ async function cancelar(id) {
     const comanda = await _buscarComandaComConsumos(id);
     if (!comanda) return null;
     validarComandaAberta(comanda);
+
+    // Devolve ao estoque todos os itens da comanda
+    for (const consumo of comanda.consumos) {
+        await EstoqueModel.entrada(consumo.fk_produto, consumo.quantidade);
+    }
+
     await comanda.update({ status: STATUS.CANCELADA, data_hora_termino: new Date() });
     return comanda;
 }

@@ -1,9 +1,10 @@
-// O Controller só sabe: receber req, chamar o Model, enviar res.
-// Não contém lógica de negócio nem manipulação direta de dados.
-
 const ProdutoModel = require('../models/produtoModel');
+const LogModel = require('../models/logModel');
 const RESP_HTTP = require('../../consts');
 const helper = require('./helpers');
+
+const log = (req, tipo, descricao) =>
+    LogModel.registrar({ fk_usuario: req.usuario.id_usuario, tipo, descricao }).catch(() => {});
 
 async function listar(req, res) {
     const produtos = await ProdutoModel.listarTodos(req.query);
@@ -21,6 +22,7 @@ async function buscar(req, res) {
 async function criar(req, res) {
     try {
         const novoProduto = await ProdutoModel.criar(req.body);
+        log(req, 'cadastrar_produto', `Produto cadastrado: ${novoProduto.nome} (id ${novoProduto.id_produto})`);
         res.status(RESP_HTTP.CREATED).set('Location', '/api/produtos/' + novoProduto.id_produto).json(novoProduto);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
@@ -33,6 +35,7 @@ async function atualizar(req, res) {
     try {
         const produto = await ProdutoModel.atualizar(id, req.body);
         if (!produto) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Produto não encontrado' });
+        log(req, 'editar_produto', `Produto editado: ${produto.nome} (id ${id})`);
         res.status(RESP_HTTP.OK).json(produto);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
@@ -45,6 +48,7 @@ async function atualizarParcial(req, res) {
     try {
         const produto = await ProdutoModel.atualizarParcial(id, req.body);
         if (!produto) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Produto não encontrado' });
+        log(req, 'editar_produto', `Produto editado parcialmente: id ${id}`);
         res.status(RESP_HTTP.OK).json(produto);
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });
@@ -57,6 +61,7 @@ async function remover(req, res) {
     try {
         const ok = await ProdutoModel.remover(id);
         if (!ok) return res.status(RESP_HTTP.NOT_FOUND).json({ erro: 'Produto não encontrado' });
+        log(req, 'remover_produto', `Produto removido: id ${id}`);
         res.status(RESP_HTTP.NO_CONTENT).send();
     } catch (err) {
         res.status(RESP_HTTP.BAD_REQUEST).json({ erro: err.message });

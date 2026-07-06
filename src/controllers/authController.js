@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const UsuarioModel = require('../models/usuarioModel');
+const LogModel = require('../models/logModel');
 const RESP_HTTP = require('../../consts');
 
 async function login(req, res) {
@@ -21,6 +22,12 @@ async function login(req, res) {
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
+
+    LogModel.registrar({
+        fk_usuario: usuario.id_usuario,
+        tipo: 'login',
+        descricao: `Login realizado por ${usuario.nome} (${usuario.perfil_acesso})`,
+    }).catch(() => {});
 
     res.status(RESP_HTTP.OK).json({ token, usuario: payload });
 }

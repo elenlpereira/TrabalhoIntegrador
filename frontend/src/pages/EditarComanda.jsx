@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import api from '../services/api'
 import Header from '../components/Header'
 
 function EditarComanda() {
     const navigate = useNavigate()
     const { id } = useParams()
+    const { state } = useLocation()
+    const voltarPara = state?.from || '/consumo'
     const nova = !id
 
     const [comanda, setComanda] = useState(null)
@@ -101,11 +103,20 @@ function EditarComanda() {
         p.nome.toLowerCase().includes(busca.toLowerCase())
     )
 
-    const nomeComanda = comanda?.info_cliente || (comanda ? `#${comanda.id_comanda}` : '...')
+    const nomeComanda = comanda?.identificacao || (comanda ? `#${comanda.id_comanda}` : '...')
+    const comandaInativa = comanda && comanda.status !== 'aberta'
 
     return (
         <div style={s.container}>
-            <Header voltarPara="/consumo" />
+            <Header voltarPara={voltarPara} />
+
+            {comandaInativa && (
+                <div style={s.bannerInativo}>
+                    <strong>Comanda {comanda.status}</strong> — esta comanda não pode ser alterada.
+                    {comanda.status === 'cancelada' && ' Foi cancelada e seus itens foram devolvidos ao estoque.'}
+                    {comanda.status === 'fechada'   && ' O pagamento já foi registrado.'}
+                </div>
+            )}
 
             <div style={s.breadcrumb}>
                 <span style={s.logoChip}>logo</span>
@@ -173,6 +184,7 @@ function EditarComanda() {
 
 const s = {
     container: { minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#fff' },
+    bannerInativo: { backgroundColor: '#fff3cd', borderBottom: '1px solid #ffc107', padding: '10px 20px', fontSize: 13, color: '#856404' },
     topbar: { background: '#1f1f1f', color: '#e6e6e6', display: 'flex', alignItems: 'center', gap: 18, padding: '12px 20px', fontSize: 14 },
     tbName: { fontWeight: 700 },
     tbSpacer: { flex: 1 },
